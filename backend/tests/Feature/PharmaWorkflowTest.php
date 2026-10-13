@@ -226,11 +226,22 @@ class PharmaWorkflowTest extends TestCase
     {
         $date = now('Asia/Jakarta')->toDateString();
         $old = app(ReportService::class)->generate($date);
-        $this->action($this->courier,'inspect',['packaging' => true, 'seal' => true, 'label' => true]);
+        $this->action($this->courier, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
         $new = app(ReportService::class)->generate($date);
-        $this->assertSame(2,$new->revision);
-        $this->assertSame('inspection',$old->fresh()->shipment_snapshot[0]['status']);
-        $this->assertSame('pending_approval',$new->shipment_snapshot[0]['status']);
-        $this->assertSame($new->id,app(ReportService::class)->generate($date)->id);
+        $this->assertSame(2, $new->revision);
+        $this->assertSame('inspection', $old->fresh()->shipment_snapshot[0]['status']);
+        $this->assertSame('pending_approval', $new->shipment_snapshot[0]['status']);
+        $this->assertSame($new->id, app(ReportService::class)->generate($date)->id);
+    }
+
+    public function test_missing_configuration_does_not_starve_new_messages(): void
+    {
+        config(['pharma.telegram_token' => 'test-token']);
+        OutboundMessage::query()->update(['status' => 'unconfigured']);
+        $message = OutboundMessage::create(['user_id' => $this->admin->id, 'audience' => 'admin', 'chat_id' => '12345', 'subject' => 'Pesan baru', 'body' => 'Pembaruan kiriman baru', 'action_url' => 'https://pharma.test/kiriman/1', 'dedupe_key' => 'fresh-message', 'status' => 'pending']);
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 456]], 200)]);
+        app(MessageService::class)->deliver(1);
+        $this->assertSame('sent', $message->fresh()->status);
+        $this->assertDatabaseCount('messages', 5);
     }
 }

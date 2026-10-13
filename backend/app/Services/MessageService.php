@@ -32,6 +32,7 @@ class MessageService
             OutboundMessage::firstOrCreate(['dedupe_key' => "event:{$event->id}:{$audience}:".($user ?? 'external')], [
                 'shipment_id' => $s->id, 'event_id' => $event->id, 'user_id' => $user, 'audience' => $audience,
                 'chat_id' => $chat, 'subject' => $event->title, 'body' => $body.$extra, 'action_url' => $url,
+                'status' => config('pharma.demo_seed', false) ? 'demo' : 'pending',
             ]);
         }
     }
@@ -43,7 +44,7 @@ class MessageService
         OutboundMessage::where('status', 'processing')->where('updated_at', '<', now()->subMinutes(5))->update(['status' => 'retry']);
         $ids = OutboundMessage::whereIn('status', ['pending', 'retry', 'unconfigured'])
             ->where(fn ($q) => $q->whereNull('next_attempt_at')->orWhere('next_attempt_at', '<=', now()))
-            ->orderBy('id')->limit($limit)->pluck('id');
+            ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'retry' THEN 1 ELSE 2 END")->orderBy('id')->limit($limit)->pluck('id');
         foreach ($ids as $id) {
             $m = DB::transaction(function () use ($id) {
                 $row = OutboundMessage::lockForUpdate()->find($id);
@@ -53,7 +54,7 @@ class MessageService
                 $chat = $row->chat_id ?: ($row->user_id ? User::find($row->user_id)?->telegram_chat_id : config('pharma.sender_chat_id'));
                 $chat = $chat ?: config('pharma.'.$row->audience.'_chat_id');
                 if (! config('pharma.telegram_token') || ! $chat) {
-                    $row->update(['status' => 'unconfigured', 'last_error' => 'Token bot atau chat ID belum dipasang.']);
+                    $row->update(['status' => 'unconfigured', 'last_error' => 'Token bot atau chat ID belum dipasang.', 'next_attempt_at' => now()->addMinutes(15)]);
 
                     return false;
                 }

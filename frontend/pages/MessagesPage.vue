@@ -18,6 +18,7 @@
     unconfigured: "Telegram belum dipasang",
     retry: "Akan dicoba kembali",
     failed: "Pengiriman belum berhasil",
+    demo: "Riwayat contoh, tidak dikirim",
   };
   const audience: Record<string, string> = {
     admin: "Admin",

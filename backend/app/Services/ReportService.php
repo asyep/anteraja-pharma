@@ -43,9 +43,10 @@ class ReportService
                 'blocked_dispatch_today' => AuditEvent::where('type', 'dispatch_blocked')->whereBetween('created_at', [$start, $end])->count()];
             $report = DailyReport::create(['report_date' => $date, 'revision' => $revision, 'last_event_id' => $watermark, 'summary' => $summary, 'shipment_snapshot' => $snapshot]);
             foreach (User::where('role', 'admin')->get() as $u) {
+                $statusText = implode("\n", array_map(fn ($status) => (WorkflowService::LABELS[$status] ?? $status).': '.$states[$status], array_keys($states)));
                 OutboundMessage::firstOrCreate(['dedupe_key' => "report:{$date}:{$revision}:{$u->id}"], [
                     'user_id' => $u->id, 'audience' => 'admin', 'chat_id' => $u->telegram_chat_id, 'subject' => 'Laporan harian Pharma',
-                    'body' => "Laporan Pharma {$date}\n{$summary['total']} kiriman tercatat. {$summary['issues_today']} kendala hari ini. {$summary['blocked_dispatch_today']} percobaan berangkat diblokir.\nRingkasan: ".json_encode($states),
+                    'body' => "Laporan Pharma {$date}\n{$summary['total']} kiriman tercatat. {$summary['issues_today']} kendala hari ini. {$summary['blocked_dispatch_today']} percobaan berangkat diblokir.\nRingkasan:\n".$statusText,
                     'action_url' => rtrim(config('pharma.frontend_url'), '/').'/laporan',
                 ]);
             }

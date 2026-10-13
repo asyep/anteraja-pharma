@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
         $courier = $users['satria@pharma.test'];
         $buyer = $users['pembeli@pharma.test'];
         $flow = app(WorkflowService::class);
+        config(['pharma.demo_seed' => true]);
         $places = [['Apotek Sehat Menteng', 'Jakarta Pusat', 'Jl. Pegangsaan Timur No. 16, Menteng'], ['Klinik Cilandak', 'Jakarta Selatan', 'Jl. Cilandak KKO No. 8'], ['Apotek Harapan Bekasi', 'Bekasi', 'Jl. Ahmad Yani No. 20'], ['Klinik Keluarga Serpong', 'Tangerang Selatan', 'Jl. Pahlawan Seribu No. 12']];
         for ($i = 1; $i <= 32; $i++) {
             $tracking = 'PHA-260'.str_pad((string) $i, 3, '0', STR_PAD_LEFT);
@@ -73,10 +74,11 @@ class DatabaseSeeder extends Seeder
                     $act($courier, 'return_complete', ['location' => 'Hub Cakung']);
                 }
 
-continue;
+                continue;
             }
             $act($courier, 'arrive', ['location' => $place[0]]);
-            $act($courier,'deliver',['received_by' => 'Petugas '.$place[0]]);
+            $act($courier, 'deliver', ['received_by' => 'Petugas '.$place[0]]);
         }
+        config(['pharma.demo_seed' => false]);
     }
 }
