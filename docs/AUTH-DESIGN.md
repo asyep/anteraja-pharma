@@ -6,6 +6,8 @@ Tiga pilihan akun demo selalu berada pada satu baris. Legend berada di luar grid
 
 Pada mobile, form ditempatkan lebih dahulu dan carousel di bawahnya. Caption tidak menutupi wajah atau paket. Grid caption menyimpan ukuran seluruh slide sehingga pergantian tidak memindahkan form. Carousel memakai interval empat detik, kontrol manual, pause saat hover/focus, pause ketika tab tersembunyi, serta reduced-motion.
 
+Foto memakai rasio asli 3:2 dan `object-fit: contain`, tanpa batas tinggi berbasis viewport. Seluruh komposisi terlihat, termasuk bagian atas kepala dan bawah paket. Pada layar desktop pendek, halaman boleh scroll vertikal daripada memotong gambar. Pengujian membandingkan rasio render dengan rasio asli untuk ketiga foto pada empat ukuran layar.
+
 ## Aset lokal
 
 - `public/images/pharma-inspection.webp`: pemeriksaan segel kemasan kesehatan, 77.040 byte.

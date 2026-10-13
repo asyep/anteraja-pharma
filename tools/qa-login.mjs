@@ -33,6 +33,27 @@ for (const width of [375, 768, 1440, 1920]) {
     assert.equal(await page.locator("#email").inputValue(), email);
   }
   await page.getByRole("button", { name: "Tampilkan cerita 1" }).click();
+  for (const index of [1, 2, 3]) {
+    await page.getByRole("button", { name: `Tampilkan cerita ${index}` }).click();
+    const photo = await page.locator(".auth-image.visible").evaluate((image) => {
+      const bounds = image.getBoundingClientRect();
+      return {
+        displayed: bounds.width / bounds.height,
+        original: image.naturalWidth / image.naturalHeight,
+        fit: getComputedStyle(image).objectFit,
+      };
+    });
+    assert.equal(photo.fit, "contain");
+    assert.ok(
+      Math.abs(photo.displayed - photo.original) < 0.01,
+      `Uncropped slide ${index}, ${width}px`,
+    );
+    await page.screenshot({
+      path: `output/screenshots/pharma-photo-${width}-${index}.png`,
+      fullPage: true,
+    });
+  }
+  await page.getByRole("button", { name: "Tampilkan cerita 1" }).click();
   await page.screenshot({ path: `output/screenshots/pharma-login-${width}.png`, fullPage: true });
   if (width >= 1440)
     assert.ok(
@@ -72,5 +93,5 @@ await context.close();
 await browser.close();
 assert.deepEqual(errors, []);
 console.log(
-  "PASS: 4 login breakpoints, aligned 3-role controls, one logo, mobile form first, carousel hover/focus pause, 3 slides, invalid login and console.",
+  "PASS: 4 login breakpoints, 12 uncropped photo checks, aligned 3-role controls, one logo, mobile form first, carousel hover/focus pause, 3 slides, invalid login and console.",
 );

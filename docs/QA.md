@@ -57,7 +57,7 @@ Tidak mengklaim audit WCAG menyeluruh, performa produksi, semua kombinasi perang
 | Path Windows dengan & mengganggu launcher dependency | Node/PHP/Java dipanggil langsung dengan path relatif/ter-quote yang aman |
 | Credential role baru belum mengikat pesan lama | Delivery dapat memakai konfigurasi chat ID per role setelah token dipasang |
 | Legend pilihan akun demo menjadi item grid dan membuat Pembeli turun baris | Legend dipisahkan dari grid tiga tombol, diuji pada empat lebar layar |
-| Foto menyisakan bidang kosong ketika tinggi panel dibatasi | Lebar wrapper foto eksplisit; object-fit cover memenuhi panel |
+| Foto terpotong oleh batas tinggi viewport | Rasio asli 3:2 tanpa max-height, object-fit contain; 12 kombinasi foto/breakpoint dibandingkan dengan ukuran asli |
 | Caption bertumpuk saat pergantian slide | Outgoing caption disembunyikan langsung, incoming fade; tinggi stack tetap stabil |
 | Pesan belum terkonfigurasi dapat menahan antrean baru | Pesan pending baru diprioritaskan; konfigurasi yang belum tersedia dicoba ulang setelah 15 menit |
 | Riwayat seed berpotensi terkirim ketika token dipasang belakangan | Pesan contoh diberi status demo, bukan antrean pengiriman; 664 pesan seed lokal ditandai tanpa menghapus audit |
@@ -65,3 +65,5 @@ Tidak mengklaim audit WCAG menyeluruh, performa produksi, semua kombinasi perang
 ## Bukti
 
 `output/e2e-results.json`, `output/screenshots/`, `output/e2e-report.csv`, dan APK lokal. Trace kegagalan pengembangan tidak masuk Git. Environment dan akun demo ada pada file privat yang di-ignore. Milestone presentasi/review/judging hanya dapat dicatat setelah kegiatan nyata.
+
+Perbaikan framing foto: `node tools/qa-login.mjs` lulus pada 375/768/1440/1920px untuk ketiga slide. Screenshot `pharma-photo-*-*.png` memperlihatkan komposisi utuh. Ketiga akun demo juga berhasil login lewat API Laravel nyata menggunakan password dari file privat; password tidak disimpan dalam bukti atau repository.
