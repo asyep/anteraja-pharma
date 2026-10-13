@@ -52,6 +52,7 @@ Tidak mengklaim audit WCAG menyeluruh, performa produksi, semua kombinasi perang
 | Laporan pertama hari itu berpotensi tertinggal dari perubahan baru | Revisi snapshot berdasarkan event watermark; CSV terbaru diuji terhadap resi saat ini |
 | Screenshot awal sempat diambil sebelum data selesai dimuat | Bukti diperbarui setelah status/komponen utama benar-benar muncul |
 | Tes QA memicu batas login karena login berulang per ukuran | Sesi per peran dipakai ulang; rate limiter produksi tetap aktif |
+| Audit gabungan 33 halaman melebihi batas tes 90 detik pada pengulangan | Batas waktu audit gabungan menjadi 240 detik dan baseURL konteks eksplisit; assertion, timeout request aplikasi, serta batas login tetap dipertahankan |
 | Path Windows dengan & mengganggu launcher dependency | Node/PHP/Java dipanggil langsung dengan path relatif/ter-quote yang aman |
 | Credential role baru belum mengikat pesan lama | Delivery dapat memakai konfigurasi chat ID per role setelah token dipasang |
 | Pesan belum terkonfigurasi dapat menahan antrean baru | Pesan pending baru diprioritaskan; konfigurasi yang belum tersedia dicoba ulang setelah 15 menit |

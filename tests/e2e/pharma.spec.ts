@@ -170,8 +170,10 @@ test("required Pharma journey through real UI: block, inspect, approve, assign, 
 test("visual QA all roles at mobile, tablet and desktop; navigation, empty state and no new console errors", async ({
   browser,
 }) => {
+  // This combined audit captures 33 pages across three roles, not one interaction.
+  test.setTimeout(240000);
   for (const role of ["admin", "courier", "buyer"] as const) {
-    const context = await browser.newContext(),
+    const context = await browser.newContext({ baseURL: "http://localhost:3170" }),
       page = await context.newPage();
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));

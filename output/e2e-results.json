@@ -114,12 +114,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 25296,
+                  "duration": 40382,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-13T04:31:45.452Z",
+                  "startTime": "2026-10-13T05:11:26.600Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -129,7 +129,7 @@
           ],
           "id": "dac77bc52035340c7499-b09ff48b7226a3639ad6",
           "file": "pharma.spec.ts",
-          "line": 38,
+          "line": 34,
           "column": 1
         },
         {
@@ -138,7 +138,7 @@
           "tags": [],
           "tests": [
             {
-              "timeout": 90000,
+              "timeout": 240000,
               "annotations": [],
               "expectedStatus": "passed",
               "projectId": "",
@@ -148,12 +148,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 39138,
+                  "duration": 36748,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-13T04:32:11.018Z",
+                  "startTime": "2026-10-13T05:12:07.274Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -163,7 +163,7 @@
           ],
           "id": "dac77bc52035340c7499-5c127d77614aaa1506cb",
           "file": "pharma.spec.ts",
-          "line": 267,
+          "line": 170,
           "column": 1
         },
         {
@@ -182,12 +182,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 16060,
+                  "duration": 15937,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-13T04:32:50.190Z",
+                  "startTime": "2026-10-13T05:12:44.043Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -197,7 +197,7 @@
           ],
           "id": "dac77bc52035340c7499-a7cb739b054d9eb474b4",
           "file": "pharma.spec.ts",
-          "line": 315,
+          "line": 220,
           "column": 1
         }
       ]
@@ -205,8 +205,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-10-13T04:31:44.750Z",
-    "duration": 81988.94099999999,
+    "startTime": "2026-10-13T05:11:25.808Z",
+    "duration": 94716.237,
     "expected": 3,
     "skipped": 0,
     "unexpected": 0,

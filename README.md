@@ -2,6 +2,8 @@
 
 Pantau pemeriksaan paket kesehatan, persetujuan Admin, tugas Satria, dan tindak lanjut kendala dalam satu alur yang tercatat.
 
+Aplikasi utama adalah web app Vue + Laravel: ketiga peran dapat membuka aplikasi lewat browser desktop maupun HP. APK Android hanya kemasan tambahan untuk demo hybrid; tidak wajib dipasang untuk menggunakan web.
+
 ## Yang bisa dijalankan
 
 - **Admin:** membuat kiriman, memeriksa, menyetujui/menahan, menugaskan, memutuskan kendala, melihat laporan dan riwayat pesan.
