@@ -1,0 +1,60 @@
+JALANKAN ANTERAJA PHARMA
+
+Folder aplikasi:
+D:\Work & Organization\Work\Maxy Academy\Modules\Hackathon\anteraja-pharma
+
+1. Pastikan MySQL XAMPP aktif. Port 3306 dan database khusus anteraja_pharma_hackathon.
+   Engine laptop ini: MariaDB 10.4.32, kompatibel driver mysql Laravel.
+   Kamu dapat klik Start MySQL di XAMPP Control Panel.
+
+2. Untuk salinan ini dependency dan database sudah disiapkan. Jalankan:
+
+cd "D:\Work & Organization\Work\Maxy Academy\Modules\Hackathon\anteraja-pharma"; npm run dev
+
+   Atau double-click run.bat.
+   Buka http://localhost:3170
+   Jangan memakai port capstone lama 3000/8089.
+   Launcher menjalankan frontend Vue, backend Laravel 8170, dan scheduler otomatis.
+   Ctrl+C di terminal menghentikan proses milik launcher. Database tidak dihapus.
+
+3. Akun demo dan kata sandi ada di .private\akun-demo.txt.
+   Pilihan Admin/Satria/Pembeli di halaman masuk hanya mengisi email.
+   Hak akses tetap ditentukan akun pada database, bukan pilihan tombol.
+
+4. Setup ulang yang aman (tidak menghapus data):
+
+npm run setup
+
+   Gunakan sesudah mengatur DB_* jika konfigurasi database berbeda.
+   Setup otomatis hanya diizinkan untuk nama database anteraja_pharma_hackathon.
+   Jangan menjalankan migrate:fresh terhadap database lain.
+
+5. Server dapat dijalankan terpisah:
+
+Frontend, dari root aplikasi:
+npm run dev:web
+
+Backend, dari folder backend:
+& C:\xampp\php\php.exe artisan serve --host=127.0.0.1 --port=8170
+
+Scheduler, terminal lain dari folder backend:
+& C:\xampp\php\php.exe artisan schedule:work
+
+6. Pemeriksaan kualitas dari root:
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+npm run test:e2e
+& C:\xampp\php\php.exe backend/vendor/phpunit/phpunit/phpunit -c backend/phpunit.xml --bootstrap backend/vendor/autoload.php
+
+Perintah PHP memakai bootstrap eksplisit karena path Windows dengan tanda & dapat bermasalah dengan runner bawaan.
+Tes browser membutuhkan server dan database aktif. Tes menciptakan kiriman dummy baru, tidak menghapus paket lama.
+
+7. Di HP browser: gunakan alamat IP laptop (satu Wi-Fi), port 3170.
+   Contoh saat pembangunan: http://172.16.0.198:3170
+   IP bisa berubah. Gunakan ipconfig untuk melihat IP Wi-Fi, bukan localhost pada HP.
+   Jika firewall memblokir, izinkan akses hanya pada jaringan privat yang kamu percaya.
+
+8. Telegram: baca docs\TELEGRAM.md. Token baru dipasang saat kamu siap.
+   Pesan nyata belum diklaim berhasil sebelum ada credential dan konfirmasi provider.

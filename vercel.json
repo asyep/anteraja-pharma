@@ -1,0 +1,45 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "regions": ["sin1"],
+  "crons": [{ "path": "/api/cron", "schedule": "0 10 * * *" }],
+  "builds": [
+    { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
+    {
+      "src": "api/index.php",
+      "use": "vercel-php@0.9.0",
+      "config": {
+        "maxDuration": 60,
+        "excludeFiles": [
+          "node_modules/**",
+          ".git/**",
+          ".private/**",
+          ".private-build/**",
+          ".env*",
+          "backend/.env*",
+          "backend/tests/**",
+          "backend/storage/**",
+          "backend/bootstrap/cache/**",
+          "frontend/**",
+          "public/**",
+          "dist/**",
+          "docs/**",
+          "tests/**",
+          "tools/**",
+          "output/**",
+          "android/**"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(?:\\.env(?:\\..*)?|\\.private(?:/.*)?|\\.git(?:/.*)?|\\.vercel(?:/.*)?|backend(?:/.*)?)",
+      "status": 404
+    },
+    { "src": "/api(?:/.*)?", "dest": "/api/index.php" },
+    { "src": "/up", "dest": "/api/index.php" },
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/index.html" }
+  ]
+}
