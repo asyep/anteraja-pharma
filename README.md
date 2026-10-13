@@ -6,6 +6,8 @@ Aplikasi utama adalah web app Vue + Laravel: ketiga peran dapat membuka aplikasi
 
 ## Yang bisa dijalankan
 
+Versi cloud: [anteraja-pharma.vercel.app](https://anteraja-pharma.vercel.app). Arsitektur, credential dan batas scheduler gratis dijelaskan di [Pharma di cloud](docs/CLOUD.md).
+
 - **Admin:** membuat kiriman, memeriksa, menyetujui/menahan, menugaskan, memutuskan kendala, melihat laporan dan riwayat pesan.
 - **Satria:** memeriksa paket sebagai petugas terpilih, menerima/menolak tugas, memperbarui perjalanan, melaporkan masalah, dan mencatat hasil retur/penerimaan.
 - **Pembeli:** melihat paket miliknya, memberikan kesiapan penerimaan, melaporkan kendala, dan mengonfirmasi paket yang sudah diterima.

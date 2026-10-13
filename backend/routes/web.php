@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\CloudSchedulerController;
 use App\Http\Controllers\PharmaController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('api')->group(function () {
+    Route::get('cron', CloudSchedulerController::class)->middleware('throttle:30,1');
     Route::get('session', [PharmaController::class, 'session']);
     Route::post('login', [PharmaController::class, 'login'])->middleware('throttle:10,1');
     Route::get('health', fn () => ['status' => 'ok', 'service' => 'Anteraja Pharma']);

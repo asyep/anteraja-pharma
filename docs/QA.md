@@ -9,13 +9,14 @@ Tanggal: 13 Oktober 2026. Scope aplikasi Pharma baru; capstone lama tidak diubah
 | TypeScript Vue | Lulus `npm run typecheck` |
 | ESLint | Lulus, warning format telah diperbaiki tanpa menonaktifkan pemeriksaan |
 | Unit UI | 4 tes lulus: nama semua tahap, tone status, invalid date, format WIB |
-| Laravel regression | 16 tes, 109 assertion lulus |
+| Laravel regression | 18 tes, 118 assertion lulus, termasuk scheduler cloud |
 | Browser E2E | 3 tes besar lulus: alur wajib lengkap, QA seluruh peran/breakpoint, carousel/keyboard/network recovery |
 | Login Pharma terbaru | 375/768/1440/1920px lulus: tiga role sejajar, satu logo, form mobile lebih dulu, carousel pause hover/focus, invalid login, tanpa overflow |
 | Production build | Lulus; bundle JS sekitar 167 kB (59 kB gzip), CSS 23 kB (5,5 kB gzip) |
 | npm audit | 0 vulnerability setelah upgrade test dependency yang sempat memiliki advisori |
 | Composer | Dependency lock diselaraskan; audit tidak menemukan advisori |
 | Database sebenarnya | Migrasi dan seed berhasil pada MariaDB XAMPP dengan driver mysql; E2E memakai database ini |
+| Produksi Vercel + TiDB | 3 tes browser penuh lulus pada domain produksi; TLS MySQL, database session, role, workflow dan export bekerja |
 | Webhook HTTP | `node tools/automation.mjs` berhasil menghasilkan report_id melalui HMAC/timestamp |
 | Android debug | Gradle `assembleDebug` berhasil; APK sekitar 5,5 MB, ikon Anteraja dan app name Pharma |
 | Perangkat Android fisik | Belum diuji; tidak ada perangkat/emulator yang tersedia pada pengecekan |
@@ -46,6 +47,7 @@ Tidak mengklaim audit WCAG menyeluruh, performa produksi, semua kombinasi perang
 | Temuan | Perbaikan |
 |---|---|
 | Version default hasil create belum terbaca pada object Eloquent | Default version model eksplisit; seed dan workflow tidak mengirim versi kosong |
+| Laravel gagal memuat controller pada deployment serverless awal | PSR-4 App dipetakan eksplisit pada api/index.php; session dan alur produksi diuji ulang |
 | Opsi select memiliki penutup tag salah saat scaffolding | Markup option diperbaiki dan Vue TypeScript diperiksa |
 | Overflow mobile dari teks sr-only di tabel | Posisi sr-only dan containing block tabel diperbaiki, scroll horizontal dibatasi di tabel |
 | Aksi Tahan menjadi pilihan awal sesudah persetujuan | Penugasan diprioritaskan; persetujuan menjadi pilihan awal untuk pending_approval |

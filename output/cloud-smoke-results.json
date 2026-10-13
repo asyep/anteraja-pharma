@@ -1,0 +1,67 @@
+{
+  "testedAt": "2026-10-13T07:46:18.115Z",
+  "base": "https://anteraja-pharma.vercel.app",
+  "checks": [
+    {
+      "path": "/masuk",
+      "status": 200
+    },
+    {
+      "path": "/kiriman/1",
+      "status": 200
+    },
+    {
+      "path": "/api/health",
+      "status": 200
+    },
+    {
+      "path": "/api/session",
+      "status": 200
+    },
+    {
+      "path": "/images/pharma-inspection.webp",
+      "status": 200
+    },
+    {
+      "path": "/images/pharma-delivery.webp",
+      "status": 200
+    },
+    {
+      "path": "/images/pharma-handover.webp",
+      "status": 200
+    },
+    {
+      "path": "/.env",
+      "status": 404
+    },
+    {
+      "path": "/backend/.env",
+      "status": 404
+    },
+    {
+      "path": "/.private/cloud.json",
+      "status": 404
+    },
+    {
+      "path": "/.git/config",
+      "status": 404
+    },
+    {
+      "path": "/api/cron (no authorization)",
+      "status": 401
+    },
+    {
+      "path": "/api/cron (authorized)",
+      "status": 200,
+      "body": {
+        "report_id": null,
+        "reminders": 3,
+        "messages": {
+          "sent": 0,
+          "failed": 0,
+          "unconfigured": 2
+        }
+      }
+    }
+  ]
+}

@@ -3,6 +3,7 @@ DAFTAR BERKAS PENGUMPULAN ANTERAJA PHARMA
 .gitattributes
 .gitignore
 .prettierrc.json
+.vercelignore
 README.md
 android/.gitignore
 android/app/.gitignore
@@ -57,11 +58,13 @@ android/gradlew
 android/gradlew.bat
 android/settings.gradle
 android/variables.gradle
+api/index.php
 backend/.editorconfig
 backend/.env.example
 backend/.gitattributes
 backend/.gitignore
 backend/README.md
+backend/app/Http/Controllers/CloudSchedulerController.php
 backend/app/Http/Controllers/Controller.php
 backend/app/Http/Controllers/PharmaController.php
 backend/app/Http/Controllers/WebhookController.php
@@ -84,6 +87,8 @@ backend/artisan
 backend/bootstrap/app.php
 backend/bootstrap/cache/.gitignore
 backend/bootstrap/providers.php
+backend/certs/README.md
+backend/certs/cacert.pem
 backend/composer.json
 backend/composer.lock
 backend/config/app.php
@@ -123,11 +128,13 @@ backend/storage/framework/sessions/.gitignore
 backend/storage/framework/testing/.gitignore
 backend/storage/framework/views/.gitignore
 backend/storage/logs/.gitignore
+backend/tests/Feature/CloudSchedulerTest.php
 backend/tests/Feature/PharmaWorkflowTest.php
 backend/tests/TestCase.php
 capacitor.config.ts
 docs/ARCHITECTURE.md
 docs/AUTH-DESIGN.md
+docs/CLOUD.md
 docs/DEMO.md
 docs/FILES.txt
 docs/IMPLEMENTATION.md
@@ -161,6 +168,8 @@ frontend/styles.css
 frontend/types.ts
 how_to_run.txt
 index.html
+output/cloud-e2e-results.json
+output/cloud-smoke-results.json
 output/e2e-report.csv
 output/e2e-results.json
 output/presentation/Anteraja-Pharma-Hackathon-v2.pptx
@@ -260,5 +269,6 @@ tools/qa-login.mjs
 tools/setup.mjs
 tools/telegram.mjs
 tsconfig.json
+vercel.json
 vite.config.ts
 vitest.config.ts

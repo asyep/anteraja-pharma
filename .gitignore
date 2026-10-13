@@ -28,3 +28,6 @@ coverage/
 .private-build/
 output/*.apk
 output/*.zip
+
+.vercel
+.env*

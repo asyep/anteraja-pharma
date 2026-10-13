@@ -2,6 +2,7 @@ import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import fs from "node:fs";
 import type { Shipment, User, Paginated } from "../../frontend/types";
 const env = fs.readFileSync("backend/.env", "utf8");
+const baseURL = process.env.PHARMA_QA_URL || "http://localhost:3170";
 const password = env.match(/^DEMO_PASSWORD=(.+)$/m)![1]!.trim();
 const emails = {
   admin: "admin@pharma.test",
@@ -15,7 +16,7 @@ async function login(page: Page, role: keyof typeof emails) {
   await page.getByLabel("Email", { exact: true }).fill(emails[role]);
   await page.getByLabel("Kata sandi", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Masuk ke Pharma" }).click();
-  await expect(page).toHaveURL("http://localhost:3170/");
+  await expect(page).toHaveURL(baseURL + "/");
   await expect(page.locator(".metrics")).toBeVisible();
 }
 async function request<T>(context: BrowserContext, path: string, body?: unknown): Promise<T> {
@@ -173,7 +174,7 @@ test("visual QA all roles at mobile, tablet and desktop; navigation, empty state
   // This combined audit captures 33 pages across three roles, not one interaction.
   test.setTimeout(240000);
   for (const role of ["admin", "courier", "buyer"] as const) {
-    const context = await browser.newContext({ baseURL: "http://localhost:3170" }),
+    const context = await browser.newContext({ baseURL }),
       page = await context.newPage();
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
@@ -258,7 +259,7 @@ test("login carousel, manual controls, reduced motion, keyboard and request fail
   await page.getByLabel("Email", { exact: true }).fill(emails.admin);
   await page.getByLabel("Kata sandi", { exact: true }).fill(password);
   await page.getByLabel("Kata sandi", { exact: true }).press("Enter");
-  await expect(page).toHaveURL("http://localhost:3170/");
+  await expect(page).toHaveURL(baseURL + "/");
   await page.evaluate(() => {
     (window as unknown as Record<string, unknown>).spaSentinel = "alive";
   });
