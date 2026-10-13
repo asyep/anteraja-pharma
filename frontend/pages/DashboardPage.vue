@@ -154,8 +154,8 @@
         </RouterLink>
       </div>
       <img
-        src="/images/sorting.webp"
-        alt="Petugas memindai paket di fasilitas pengiriman"
+        src="/images/pharma-inspection.webp"
+        alt="Ilustrasi pemeriksaan segel paket kesehatan sebelum pengiriman"
         width="650"
         height="400"
       />

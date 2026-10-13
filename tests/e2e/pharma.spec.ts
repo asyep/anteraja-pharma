@@ -225,15 +225,24 @@ test("login carousel, manual controls, reduced motion, keyboard and request fail
     }),
     page = await context.newPage();
   await page.goto("/masuk");
-  await expect(page.locator(".auth-image.visible")).toHaveAttribute("src", "/images/sorting.webp");
+  await expect(page.locator(".auth-image.visible")).toHaveAttribute(
+    "src",
+    "/images/pharma-inspection.webp",
+  );
   await page.waitForTimeout(4300);
-  await expect(page.locator(".auth-image.visible")).toHaveAttribute("src", "/images/courier.webp");
+  await expect(page.locator(".auth-image.visible")).toHaveAttribute(
+    "src",
+    "/images/pharma-delivery.webp",
+  );
   await page.getByRole("button", { name: "Hentikan cerita otomatis" }).click();
   const src = await page.locator(".auth-image.visible").getAttribute("src");
   await page.waitForTimeout(4300);
   expect(await page.locator(".auth-image.visible").getAttribute("src")).toBe(src);
   await page.getByRole("button", { name: "Tampilkan cerita 3" }).click();
-  await expect(page.locator(".auth-image.visible")).toHaveAttribute("src", "/images/handoff.webp");
+  await expect(page.locator(".auth-image.visible")).toHaveAttribute(
+    "src",
+    "/images/pharma-handover.webp",
+  );
   await page.screenshot({
     path: "output/screenshots/login-desktop.png",
     fullPage: true,
@@ -242,7 +251,10 @@ test("login carousel, manual controls, reduced motion, keyboard and request fail
   await page.getByRole("button", { name: "Putar cerita otomatis" }).click();
   await page.getByLabel("Email", { exact: true }).focus();
   await page.waitForTimeout(4300);
-  await expect(page.locator(".auth-image.visible")).toHaveAttribute("src", "/images/handoff.webp");
+  await expect(page.locator(".auth-image.visible")).toHaveAttribute(
+    "src",
+    "/images/pharma-handover.webp",
+  );
   await page.getByLabel("Email", { exact: true }).fill(emails.admin);
   await page.getByLabel("Kata sandi", { exact: true }).fill(password);
   await page.getByLabel("Kata sandi", { exact: true }).press("Enter");

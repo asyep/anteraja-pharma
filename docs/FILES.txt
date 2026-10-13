@@ -127,6 +127,7 @@ backend/tests/Feature/PharmaWorkflowTest.php
 backend/tests/TestCase.php
 capacitor.config.ts
 docs/ARCHITECTURE.md
+docs/AUTH-DESIGN.md
 docs/DEMO.md
 docs/FILES.txt
 docs/IMPLEMENTATION.md
@@ -145,6 +146,7 @@ frontend/components/StatusLabel.vue
 frontend/composables/useResource.ts
 frontend/lib/api.ts
 frontend/lib/presentation.ts
+frontend/login.css
 frontend/main.ts
 frontend/pages/CreateShipment.vue
 frontend/pages/DashboardPage.vue
@@ -213,6 +215,14 @@ output/screenshots/courier-held-viewport.png
 output/screenshots/login-desktop.png
 output/screenshots/mobile-overflow-before.png
 output/screenshots/network-error.png
+output/screenshots/pharma-login-1440.png
+output/screenshots/pharma-login-1920.png
+output/screenshots/pharma-login-375.png
+output/screenshots/pharma-login-768.png
+output/screenshots/pharma-login-error.png
+output/screenshots/pharma-story-1.png
+output/screenshots/pharma-story-2.png
+output/screenshots/pharma-story-3.png
 output/screenshots/required-01-blocked.png
 output/screenshots/required-02-held.png
 output/screenshots/required-03-returned.png
@@ -224,6 +234,9 @@ public/brand/anteraja-mark.png
 public/fonts/open-sans-latin.woff2
 public/images/courier.webp
 public/images/handoff.webp
+public/images/pharma-delivery.webp
+public/images/pharma-handover.webp
+public/images/pharma-inspection.webp
 public/images/sorting.webp
 run.bat
 tests/e2e/pharma.spec.ts
@@ -231,6 +244,7 @@ tests/unit/presentation.test.ts
 tools/automation.mjs
 tools/dev.mjs
 tools/init-db.php
+tools/qa-login.mjs
 tools/setup.mjs
 tools/telegram.mjs
 tsconfig.json

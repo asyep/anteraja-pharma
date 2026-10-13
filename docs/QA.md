@@ -11,6 +11,7 @@ Tanggal: 13 Oktober 2026. Scope aplikasi Pharma baru; capstone lama tidak diubah
 | Unit UI | 4 tes lulus: nama semua tahap, tone status, invalid date, format WIB |
 | Laravel regression | 16 tes, 109 assertion lulus |
 | Browser E2E | 3 tes besar lulus: alur wajib lengkap, QA seluruh peran/breakpoint, carousel/keyboard/network recovery |
+| Login Pharma terbaru | 375/768/1440/1920px lulus: tiga role sejajar, satu logo, form mobile lebih dulu, carousel pause hover/focus, invalid login, tanpa overflow |
 | Production build | Lulus; bundle JS sekitar 167 kB (59 kB gzip), CSS 23 kB (5,5 kB gzip) |
 | npm audit | 0 vulnerability setelah upgrade test dependency yang sempat memiliki advisori |
 | Composer | Dependency lock diselaraskan; audit tidak menemukan advisori |
@@ -55,6 +56,9 @@ Tidak mengklaim audit WCAG menyeluruh, performa produksi, semua kombinasi perang
 | Audit gabungan 33 halaman melebihi batas tes 90 detik pada pengulangan | Batas waktu audit gabungan menjadi 240 detik dan baseURL konteks eksplisit; assertion, timeout request aplikasi, serta batas login tetap dipertahankan |
 | Path Windows dengan & mengganggu launcher dependency | Node/PHP/Java dipanggil langsung dengan path relatif/ter-quote yang aman |
 | Credential role baru belum mengikat pesan lama | Delivery dapat memakai konfigurasi chat ID per role setelah token dipasang |
+| Legend pilihan akun demo menjadi item grid dan membuat Pembeli turun baris | Legend dipisahkan dari grid tiga tombol, diuji pada empat lebar layar |
+| Foto menyisakan bidang kosong ketika tinggi panel dibatasi | Lebar wrapper foto eksplisit; object-fit cover memenuhi panel |
+| Caption bertumpuk saat pergantian slide | Outgoing caption disembunyikan langsung, incoming fade; tinggi stack tetap stabil |
 | Pesan belum terkonfigurasi dapat menahan antrean baru | Pesan pending baru diprioritaskan; konfigurasi yang belum tersedia dicoba ulang setelah 15 menit |
 | Riwayat seed berpotensi terkirim ketika token dipasang belakangan | Pesan contoh diberi status demo, bukan antrean pengiriman; 664 pesan seed lokal ditandai tanpa menghapus audit |
 
