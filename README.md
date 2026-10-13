@@ -75,6 +75,6 @@ Tes browser membutuhkan server/database aktif, memakai Chrome dan membuat paket 
 
 Prototype hackathon dengan data fiktif, bukan sistem medis produksi atau bukti sertifikasi CDOB. Suhu dicatat manual sesuai instruksi per paket, bukan sensor. Pesan Telegram nyata menunggu credential pengguna; status `sent` hanya muncul setelah provider mengonfirmasi. Demo/judging resmi merupakan kegiatan manusia yang belum berlangsung.
 
-Logo Anteraja berasal dari aset project sebelumnya. Descriptor Pharma membedakan produk prototype; tidak mengaku sebagai lockup logo resmi baru. Materi official berada di folder Material di luar aplikasi, sedangkan BMC dan ALUR dipakai sebagai referensi saja.
+Logo web Anteraja Pharma dan simbol favicon memakai dua aset yang diberikan pemilik proyek. Margin putih dirapikan tanpa menggambar ulang bentuk logo; sumber asli tetap disimpan di public/brand. Pemakaian aset pada prototype tidak menyatakan status logo resmi atau sertifikasi. Materi official berada di folder Material di luar aplikasi, sedangkan BMC dan ALUR dipakai sebagai referensi saja.
 
 Kode aplikasi disiapkan untuk latihan kelompok. Identitas dan aset Anteraja tetap milik pemegang merek, bukan dilisensikan ulang oleh repository ini.

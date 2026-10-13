@@ -14,7 +14,9 @@ Foto memakai rasio asli 3:2 dan `object-fit: contain`, tanpa batas tinggi berbas
 - `public/images/pharma-delivery.webp`: pengantaran paket kesehatan ke apotek, 106.522 byte.
 - `public/images/pharma-handover.webp`: serah terima di konter apotek, 79.224 byte.
 
-Ketiganya adalah visual ilustratif untuk prototype, bukan foto dokumentasi pengiriman nyata. Tidak memuat logo atau tulisan produk palsu. File lokal WebP tidak memakai hotlink. Logo asli tetap berasal dari aset Anteraja yang sudah tersedia.
+Ketiganya adalah visual ilustratif untuk prototype, bukan foto dokumentasi pengiriman nyata. Tidak memuat logo atau tulisan produk palsu. File lokal WebP tidak memakai hotlink.
+
+Logo web memakai `public/brand/pharma-logo.webp`, berasal dari wordmark Anteraja Pharma yang diberikan pemilik proyek. Favicon memakai gambar simbol silang yang diberikan terpisah: `pharma-favicon.ico`, PNG 16/32/48/64/192px, serta apple-touch-icon 180px. Sumber asli disimpan sebagai `pharma-logo-source.png` dan `pharma-symbol-source.png`. Semua halaman memakai BrandLogo yang sama, dengan ukuran lebih ringkas pada navigasi mobile.
 
 ## Verifikasi
 

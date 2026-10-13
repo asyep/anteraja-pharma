@@ -1,9 +1,5 @@
 <template>
   <span class="brand">
-    <img src="/brand/anteraja-mark.png" width="40" height="40" alt="" />
-    <span>
-      <strong>anteraja</strong>
-      <span class="brand-product">Pharma</span>
-    </span>
+    <img src="/brand/pharma-logo.webp" width="184" height="72" alt="Anteraja Pharma" />
   </span>
 </template>

@@ -252,6 +252,17 @@ package.json
 playwright.config.ts
 public/brand/anteraja-favicon.png
 public/brand/anteraja-mark.png
+public/brand/pharma-favicon.ico
+public/brand/pharma-icon-16.png
+public/brand/pharma-icon-180.png
+public/brand/pharma-icon-192.png
+public/brand/pharma-icon-32.png
+public/brand/pharma-icon-48.png
+public/brand/pharma-icon-512.png
+public/brand/pharma-icon-64.png
+public/brand/pharma-logo-source.png
+public/brand/pharma-logo.webp
+public/brand/pharma-symbol-source.png
 public/fonts/open-sans-latin.woff2
 public/images/courier.webp
 public/images/handoff.webp

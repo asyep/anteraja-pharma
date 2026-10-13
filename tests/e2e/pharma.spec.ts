@@ -187,6 +187,21 @@ test("visual QA all roles at mobile, tablet and desktop; navigation, empty state
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
       await expect(page.locator(".metrics")).toBeVisible();
+      expect(
+        await page
+          .locator(".brand img")
+          .evaluateAll((images) =>
+            images.every(
+              (image) =>
+                image.getAttribute("src") === "/brand/pharma-logo.webp" &&
+                image.getAttribute("alt") === "Anteraja Pharma",
+            ),
+          ),
+      ).toBe(true);
+      await expect(page.locator('link[rel="icon"][type="image/x-icon"]')).toHaveAttribute(
+        "href",
+        "/brand/pharma-favicon.ico",
+      );
       await page.screenshot({
         path: `output/screenshots/${role}-${width}-dashboard.png`,
         fullPage: true,

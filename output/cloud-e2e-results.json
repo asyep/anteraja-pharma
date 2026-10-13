@@ -114,12 +114,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 29243,
+                  "duration": 39879,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-13T07:40:33.057Z",
+                  "startTime": "2026-10-13T08:10:03.669Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -148,12 +148,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 40941,
+                  "duration": 54247,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-13T07:41:02.574Z",
+                  "startTime": "2026-10-13T08:10:43.951Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -182,12 +182,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 16343,
+                  "duration": 18141,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-13T07:41:43.533Z",
+                  "startTime": "2026-10-13T08:11:38.274Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -197,7 +197,7 @@
           ],
           "id": "dac77bc52035340c7499-a7cb739b054d9eb474b4",
           "file": "pharma.spec.ts",
-          "line": 221,
+          "line": 236,
           "column": 1
         }
       ]
@@ -205,8 +205,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-10-13T07:40:32.482Z",
-    "duration": 87954.389,
+    "startTime": "2026-10-13T08:10:03.094Z",
+    "duration": 115368.575,
     "expected": 3,
     "skipped": 0,
     "unexpected": 0,

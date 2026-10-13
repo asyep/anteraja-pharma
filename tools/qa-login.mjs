@@ -1,6 +1,7 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 const browser = await chromium.launch({ channel: "chrome" });
+const baseURL = process.env.PHARMA_QA_URL || "http://localhost:3170";
 const errors = [];
 for (const width of [375, 768, 1440, 1920]) {
   const context = await browser.newContext({
@@ -9,7 +10,7 @@ for (const width of [375, 768, 1440, 1920]) {
   });
   const page = await context.newPage();
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("http://localhost:3170/masuk");
+  await page.goto(baseURL + "/masuk");
   await page.locator(".auth-image.visible").waitFor();
   await page.evaluate(() =>
     Promise.all([...document.images].map((i) => i.decode().catch(() => {}))),
@@ -69,7 +70,7 @@ for (const width of [375, 768, 1440, 1920]) {
 }
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 const page = await context.newPage();
-await page.goto("http://localhost:3170/masuk");
+await page.goto(baseURL + "/masuk");
 await page.locator(".pharma-story").hover();
 let current = await page.locator(".auth-image.visible").getAttribute("src");
 await page.waitForTimeout(4300);
