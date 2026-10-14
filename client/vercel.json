@@ -20,14 +20,12 @@
           "backend/tests/**",
           "backend/storage/**",
           "backend/bootstrap/cache/**",
-          "frontend/**",
+          "src/**",
           "public/**",
           "dist/**",
           "docs/**",
           "tests/**",
-          "tools/**",
-          "output/**",
-          "android/**"
+          "tools/**"
         ]
       }
     }

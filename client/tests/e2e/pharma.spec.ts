@@ -1,20 +1,25 @@
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import fs from "node:fs";
-import type { Shipment, User, Paginated } from "../../frontend/types";
-const env = fs.readFileSync("backend/.env", "utf8");
+import type { Shipment, User, Paginated } from "../../src/types";
+const env = fs.readFileSync(new URL("../../../server/.env", import.meta.url), "utf8");
 const baseURL = process.env.PHARMA_QA_URL || "http://localhost:3170";
-const password = env.match(/^DEMO_PASSWORD=(.+)$/m)![1]!.trim();
+function getDemoPassword(): string {
+  const password = process.env.DEMO_PASSWORD ?? env.match(/^DEMO_PASSWORD=(.+)$/m)?.[1]?.trim();
+  if (!password) {
+    throw new Error("Set DEMO_PASSWORD in the environment or server/.env before running E2E tests.");
+  }
+
+  return password;
+}
 const emails = {
   admin: "admin@pharma.test",
   courier: "satria@pharma.test",
   buyer: "pembeli@pharma.test",
 };
-fs.mkdirSync("output/screenshots", { recursive: true });
-
 async function login(page: Page, role: keyof typeof emails) {
   await page.goto("/masuk");
   await page.getByLabel("Email", { exact: true }).fill(emails[role]);
-  await page.getByLabel("Kata sandi", { exact: true }).fill(password);
+  await page.getByLabel("Kata sandi", { exact: true }).fill(getDemoPassword());
   await page.getByRole("button", { name: "Masuk ke Pharma" }).click();
   await expect(page).toHaveURL(baseURL + "/");
   await expect(page.locator(".metrics")).toBeVisible();
@@ -35,6 +40,7 @@ async function request<T>(context: BrowserContext, path: string, body?: unknown)
 test("required Pharma journey through real UI: block, inspect, approve, assign, seal issue, return", async ({
   browser,
 }) => {
+  fs.mkdirSync("output/screenshots", { recursive: true });
   const contexts = await Promise.all([
     browser.newContext(),
     browser.newContext(),
