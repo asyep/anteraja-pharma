@@ -25,7 +25,8 @@ class MessageService
             $targets[] = [null, 'sender', $s->sender_chat_id];
             $assignment = $s->assignments()->latest('id')->first();
             $courier = $assignment ? User::find($assignment->courier_id) : $s->inspector;
-            $targets[] = [$courier->id, 'courier', $courier->telegram_chat_id];
+            $audience = $assignment ? 'courier' : 'checker';
+            $targets[] = [$courier->id, $audience, $courier->telegram_chat_id];
         }
         foreach ($targets as [$user, $audience, $chat]) {
             $extra = $audience === 'courier' ? "\nInstruksi: {$s->handling_instructions}" : '';
@@ -37,12 +38,13 @@ class MessageService
         }
     }
 
-    public function deliver(int $limit = 30): array
+    public function deliver(int $limit = 30, ?int $onlyId = null): array
     {
         $counts = ['sent' => 0, 'failed' => 0, 'unconfigured' => 0];
         // recover work interrupted before the provider responded; do not claim exactly-once delivery.
         OutboundMessage::where('status', 'processing')->where('updated_at', '<', now()->subMinutes(5))->update(['status' => 'retry']);
         $ids = OutboundMessage::whereIn('status', ['pending', 'retry', 'unconfigured'])
+            ->when($onlyId !== null, fn ($q) => $q->where('id', $onlyId))
             ->where(fn ($q) => $q->whereNull('next_attempt_at')->orWhere('next_attempt_at', '<=', now()))
             ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'retry' THEN 1 ELSE 2 END")->orderBy('id')->limit($limit)->pluck('id');
         foreach ($ids as $id) {

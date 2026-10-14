@@ -1,10 +1,17 @@
+import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import net from "node:net";
+import { resolvePhpBinary } from "./php-binary.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
-const php =
-  process.env.PHP_BINARY || (process.platform === "win32" ? "C:/xampp/php/php.exe" : "php");
+const backend = path.resolve(root, "..", "server");
+const php = resolvePhpBinary();
+if (process.platform === "win32" && existsSync(path.join(path.dirname(php), "ext/php_gd.dll")))
+  process.env.PHP_INI_SCAN_DIR = path.join(backend, "runtime/windows");
+if (!existsSync(path.join(backend, "artisan"))) {
+  throw new Error(`Laravel backend tidak ditemukan: ${backend}`);
+}
 const children = [];
 let closing = false;
 function stop(code = 0) {
@@ -21,35 +28,64 @@ function stop(code = 0) {
   }
   setTimeout(() => process.exit(code), 500);
 }
-for (const port of [3170, 8170])
-  await new Promise((resolve, reject) => {
+async function isPortAvailable(port) {
+  return new Promise((resolve, reject) => {
     const server = net.createServer();
-    server.once("error", () =>
-      reject(
-        new Error(
-          `Port ${port} sudah digunakan. Tutup server Pharma lama; server lain tidak akan dihentikan otomatis.`,
-        ),
-      ),
-    );
-    server.listen(port, "127.0.0.1", () => server.close(resolve));
+    server.once("error", (error) => {
+      if (error.code === "EADDRINUSE") resolve(false);
+      else reject(error);
+    });
+    server.listen(port, "127.0.0.1", () => server.close(() => resolve(true)));
   });
-function start(command, args, cwd = root) {
+}
+
+if (!(await isPortAvailable(3170))) {
+  throw new Error(
+    "Port 3170 sudah digunakan. Tutup Vite/Frontend Pharma yang lama sebelum menjalankan launcher.",
+  );
+}
+
+let apiPort;
+for (let port = 8170; port <= 8190; port++) {
+  if (await isPortAvailable(port)) {
+    apiPort = port;
+    break;
+  }
+}
+if (!apiPort) {
+  throw new Error("Tidak ada port API yang tersedia pada rentang 8170-8190.");
+}
+
+function start(command, args, cwd = root, label = command) {
   const child = spawn(command, args, {
     cwd,
+    env: { ...process.env, PHARMA_API_PORT: String(apiPort) },
     stdio: "inherit",
     windowsHide: true,
   });
   children.push(child);
   child.on("error", (e) => {
-    console.error(e.message);
+    if (e.code === "ENOENT" && command === php) {
+      console.error(
+        `PHP tidak ditemukan ("${php}"). Pastikan PHP ada di PATH atau set PHP_BINARY ke lokasi php.exe.`,
+      );
+    } else {
+      console.error(`${label} gagal dijalankan: ${e.message}`);
+    }
     stop(1);
   });
   child.on("exit", (code) => {
     if (!closing) stop(code || 0);
   });
 }
-start(php, ["artisan", "serve", "--host=127.0.0.1", "--port=8170"], path.join(root, "backend"));
-start(php, ["artisan", "schedule:work"], path.join(root, "backend"));
+start(php, ["artisan", "serve", "--host=127.0.0.1", `--port=${apiPort}`], backend, "Laravel API");
+start(php, ["artisan", "schedule:work"], backend, "Laravel scheduler");
+start(
+  php,
+  ["artisan", "queue:work", "database", "--sleep=1", "--tries=2", "--timeout=15"],
+  backend,
+  "Optional AI worker",
+);
 start(process.execPath, [
   "node_modules/vite/bin/vite.js",
   "--host",
@@ -61,5 +97,5 @@ start(process.execPath, [
 process.on("SIGINT", () => stop());
 process.on("SIGTERM", () => stop());
 console.log(
-  "Anteraja Pharma: http://localhost:3170 — Ctrl+C menghentikan server milik launcher ini.",
+  `Anteraja Pharma: http://localhost:3170 (API: ${apiPort}) — Ctrl+C menghentikan server milik launcher ini.`,
 );

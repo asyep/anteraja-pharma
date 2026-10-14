@@ -5,17 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Shipment extends Model
 {
     protected $guarded = ['id'];
-    protected $hidden = ['sender_chat_id'];
+    protected $hidden = ['sender_chat_id', 'pod_proof_path', 'receiver_signature'];
 
     protected $attributes = ['version' => 1];
 
     protected function casts(): array
     {
-        return ['scheduled_at' => 'datetime', 'completed_at' => 'datetime', 'recipient_ready' => 'boolean', 'version' => 'integer'];
+        return ['scheduled_at' => 'datetime', 'completed_at' => 'datetime', 'closed_at' => 'datetime', 'is_demo' => 'boolean', 'recipient_ready' => 'boolean', 'version' => 'integer'];
     }
 
     public function buyer(): BelongsTo
@@ -51,5 +52,20 @@ class Shipment extends Model
     public function events(): HasMany
     {
         return $this->hasMany(AuditEvent::class)->orderBy('id');
+    }
+
+    public function trackingPoints(): HasMany
+    {
+        return $this->hasMany(TrackingPoint::class)->orderBy('id');
+    }
+
+    public function aiEvaluations(): HasMany
+    {
+        return $this->hasMany(AiEvaluation::class)->orderBy('id');
+    }
+
+    public function finalReport(): HasOne
+    {
+        return $this->hasOne(FinalShipmentReport::class);
     }
 }

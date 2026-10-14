@@ -3,6 +3,7 @@
 use App\Services\AutomationService;
 use App\Services\MessageService;
 use App\Services\ReportService;
+use App\Services\TelemetryAutomationService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
@@ -22,6 +23,10 @@ Artisan::command('pharma:report {date?}', function () {
 Artisan::command('pharma:reminders', function () {
     $this->info(app(AutomationService::class)->reminders().' pengingat baru.');
 });
+Artisan::command('pharma:telemetry-check', function () {
+    $this->info(app(TelemetryAutomationService::class)->detectTelemetryDisruptions().' gangguan telemetry baru.');
+});
 Schedule::command('pharma:messages')->everyMinute()->withoutOverlapping();
+Schedule::command('pharma:telemetry-check')->everyMinute()->withoutOverlapping();
 Schedule::command('pharma:reminders')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('pharma:report')->dailyAt('17:00')->timezone('Asia/Jakarta')->withoutOverlapping();

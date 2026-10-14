@@ -10,6 +10,7 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
+    protected $attributes = ['is_active' => true];
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
@@ -24,6 +25,8 @@ class User extends Authenticatable
         'password',
         'role',
         'telegram_chat_id',
+        'is_active',
+        'cold_box_capacity_kg',
     ];
 
     /**
@@ -47,6 +50,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
+            'cold_box_capacity_kg' => 'float',
         ];
     }
 }

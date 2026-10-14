@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import crypto from "node:crypto";
-const text = fs.readFileSync(new URL("../backend/.env", import.meta.url), "utf8");
+const text = fs.readFileSync(new URL("../../server/.env", import.meta.url), "utf8");
 const secret = text.match(/^AUTOMATION_WEBHOOK_SECRET=(.+)$/m)?.[1]?.trim();
-if (!secret) throw new Error("Pasang AUTOMATION_WEBHOOK_SECRET di backend/.env.");
+if (!secret) throw new Error("Pasang AUTOMATION_WEBHOOK_SECRET di server/.env.");
 const timestamp = String(Math.floor(Date.now() / 1000));
 const date = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Jakarta",

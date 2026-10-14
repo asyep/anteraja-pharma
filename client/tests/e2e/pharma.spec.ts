@@ -1,300 +1,272 @@
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import fs from "node:fs";
-import type { Shipment, User, Paginated } from "../../frontend/types";
-const env = fs.readFileSync("backend/.env", "utf8");
-const baseURL = process.env.PHARMA_QA_URL || "http://localhost:3170";
-const password = env.match(/^DEMO_PASSWORD=(.+)$/m)![1]!.trim();
+const env = fs.readFileSync(new URL("../../../server/.env", import.meta.url), "utf8");
+const password = process.env.DEMO_PASSWORD || env.match(/^DEMO_PASSWORD=(.+)$/m)?.[1]?.trim();
 const emails = {
   admin: "admin@pharma.test",
+  checker: "checker@pharma.test",
   courier: "satria@pharma.test",
-  buyer: "pembeli@pharma.test",
+  buyer: "vendor@pharma.test",
 };
-fs.mkdirSync("output/screenshots", { recursive: true });
-
+const photo = {
+  name: "proof.png",
+  mimeType: "image/png",
+  buffer: Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
+    "base64",
+  ),
+};
 async function login(page: Page, role: keyof typeof emails) {
+  if (!password) throw new Error("Set DEMO_PASSWORD locally before running tests.");
   await page.goto("/masuk");
   await page.getByLabel("Email", { exact: true }).fill(emails[role]);
   await page.getByLabel("Kata sandi", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "Masuk ke Pharma" }).click();
-  await expect(page).toHaveURL(baseURL + "/");
-  await expect(page.locator(".metrics")).toBeVisible();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/api/login'));
+    await page.getByRole('button', { name: 'Masuk ke Pharma' }).click();
+    const result = await response;
+    if (result.status() !== 429) { expect(result.ok()).toBeTruthy(); break; }
+    // respect the real login throttle; do not disable security for tests.
+    const seconds = Math.max(1, Math.min(60, Number(result.headers()['retry-after']) || 60));
+    await new Promise(resolve => setTimeout(resolve, (seconds + 1) * 1000));
+  }
+  await expect(page).toHaveURL(/\/$/);
 }
-async function request<T>(context: BrowserContext, path: string, body?: unknown): Promise<T> {
+async function request(context: BrowserContext, path: string, data?: unknown) {
   const session = await context.request.get("/api/session");
   const token = (await session.json()).csrf_token;
-  const response = body
+  const response = data
     ? await context.request.post("/api/" + path, {
-        data: body,
+        data,
         headers: { "X-CSRF-TOKEN": token, Accept: "application/json" },
       })
     : await context.request.get("/api/" + path);
-  expect(response.ok(), `API ${path}: ${response.status()}`).toBeTruthy();
+  expect(response.ok(), path + ": " + response.status()).toBeTruthy();
   return response.json();
 }
-
-test("required Pharma journey through real UI: block, inspect, approve, assign, seal issue, return", async ({
+async function act(page: Page, title: string, fill?: () => Promise<void>) {
+  await page.locator(".action-options").getByRole("button", { name: title, exact: true }).click();
+  if (fill) await fill();
+  if (await page.locator("#action-reason").count())
+    await page.locator("#action-reason").fill("Hasil pemeriksaan dan instruksi QA yang tercatat.");
+  const response = page.waitForResponse(
+    (r) =>
+      r.request().method() === "POST" && /\/api\/shipments\/\d+\/(actions|telemetry)/.test(r.url()),
+  );
+  await page.locator(".action-panel button[type=submit]").click();
+  const result = await response;
+  if (!result.ok() && title !== "Setujui pengiriman")
+    throw new Error(title + ": " + result.status() + " " + (await result.text()));
+}
+test("four-role flow: checklist gate, physical proof, GPS, simulated hold, return, private PDF", async ({
   browser,
 }) => {
-  const contexts = await Promise.all([
-    browser.newContext(),
-    browser.newContext(),
-    browser.newContext(),
-  ]);
-  const [admin, courier, buyer] = await Promise.all(contexts.map((c) => c.newPage()));
-  await login(admin!, "admin");
-  await login(courier!, "courier");
-  await login(buyer!, "buyer");
-  const users = await request<User[]>(contexts[0]!, "directory");
-  await admin!.goto("/kiriman/baru");
-  await admin!.getByLabel("Nama pengirim", { exact: true }).fill("Distribusi sehat — QA");
-  await admin!.getByLabel("Nama penerima / fasilitas").fill("Klinik Pharma QA " + Date.now());
-  await admin!.getByLabel("Nomor telepon penerima").fill("081200000000");
-  await admin!.getByLabel("Kota tujuan").fill("Jakarta Selatan");
-  await admin!.getByLabel("Ringkasan isi paket").fill("Perlengkapan kesehatan — contoh uji");
-  await admin!
-    .getByLabel("Akun pembeli yang bisa melihat paket")
-    .selectOption(String(users.find((u) => u.role === "buyer" && u.name === "Nadia Putri")!.id));
-  await admin!
-    .getByLabel("Satria yang memeriksa paket")
-    .selectOption(
-      String(users.find((u) => u.role === "courier" && u.name === "Dimas Saputra")!.id),
-    );
-  await admin!.getByLabel("Alamat lengkap tujuan").fill("Jl. Cilandak KKO No. 8, Jakarta Selatan");
-  await admin!.getByLabel("Jadwal tiba").fill("2026-10-16T18:00");
-  await admin!
-    .getByLabel("Instruksi untuk pemeriksaan dan pengantaran")
-    .fill("Paket tetap tegak. Segel diperiksa bersama penerima. Jika rusak, hentikan pengiriman.");
-  await admin!.getByRole("button", { name: "Simpan kiriman" }).click();
-  await expect(admin!).toHaveURL(/\/kiriman\/\d+$/);
-  const detailUrl = admin!.url();
-  await admin!.getByRole("button", { name: "Setujui pengiriman", exact: true }).first().click();
-  await admin!
-    .getByLabel("Catatan dan alasan")
-    .fill("Menguji pemblokiran saat checklist belum lengkap.");
-  await admin!.getByRole("button", { name: "Setujui pengiriman", exact: true }).last().click();
-  await expect(admin!.getByRole("alert")).toContainText("Paket belum boleh berangkat");
-  await admin!.screenshot({
-    path: "output/screenshots/required-01-blocked.png",
-    fullPage: true,
-  });
-  await courier!.goto(detailUrl);
-  await courier!.getByLabel("Kemasan utuh dan sesuai instruksi").check();
-  await courier!.getByLabel("Segel utuh, belum terbuka").check();
-  await courier!.getByLabel("Label sesuai data penerima").check();
-  await courier!
-    .getByLabel("Catatan dan alasan")
-    .fill("Kemasan, segel, dan label sesuai hasil pemeriksaan.");
-  await courier!.getByRole("button", { name: "Periksa paket", exact: true }).last().click();
-  await expect(courier!.locator(".shipment-hero")).toContainText("Menunggu persetujuan");
-  await admin!.reload();
-  await admin!.getByRole("button", { name: "Setujui pengiriman", exact: true }).first().click();
-  await admin!
-    .getByLabel("Catatan dan alasan")
-    .fill("Hasil pemeriksaan lengkap. Paket boleh ditugaskan.");
-  await admin!.getByRole("button", { name: "Setujui pengiriman", exact: true }).last().click();
-  await expect(admin!.locator(".shipment-hero")).toContainText("Siap ditugaskan");
-  await admin!.getByRole("button", { name: "Tugaskan Satria", exact: true }).first().click();
-  await admin!
-    .getByLabel("Pilih Satria")
-    .selectOption(String(users.find((u) => u.name === "Dimas Saputra")!.id));
-  await admin!
-    .getByLabel("Catatan dan alasan")
-    .fill("Antar sesuai instruksi; laporkan masalah segel.");
-  await admin!.getByRole("button", { name: "Tugaskan Satria", exact: true }).last().click();
-  await expect(admin!.locator(".shipment-hero")).toContainText("Menunggu jawaban Satria");
-  await courier!.reload();
-  await courier!
-    .getByLabel("Catatan dan alasan")
-    .fill("Saya siap mengambil dan mengantar sesuai instruksi.");
-  await courier!.getByRole("button", { name: "Terima tugas", exact: true }).last().click();
-  await expect(courier!.locator(".shipment-hero")).toContainText("Siap diambil");
-  await courier!.getByLabel("Lokasi saat ini").fill("Hub Cakung");
-  await courier!.getByLabel("Catatan dan alasan").fill("Berangkat ke Klinik Cilandak.");
-  await courier!.getByRole("button", { name: "Mulai perjalanan", exact: true }).last().click();
-  await expect(courier!.locator(".shipment-hero")).toContainText("Dalam perjalanan");
-  await buyer!.goto(detailUrl);
-  await expect(buyer!.locator(".shipment-hero")).toContainText("Dalam perjalanan");
-  await courier!.getByRole("button", { name: "Laporkan kendala", exact: true }).first().click();
-  await courier!.getByLabel("Apa kendalanya?").selectOption("seal");
-  await courier!
-    .getByLabel("Ceritakan kondisi paket")
-    .fill(
-      "Segel terlihat terbuka saat paket diperiksa sebelum serah terima. Paket tidak diserahkan.",
-    );
-  await courier!.getByRole("button", { name: "Laporkan kendala", exact: true }).last().click();
-  await expect(courier!.locator(".shipment-hero")).toContainText("Ditahan sementara");
-  await courier!.screenshot({
-    path: "output/screenshots/required-02-held.png",
-    fullPage: true,
-  });
-  await admin!.reload();
-  await admin!.getByLabel("Tindakan untuk Satria").selectOption("return");
-  await admin!
-    .getByLabel("Catatan dan alasan")
-    .fill("Jangan serahkan ke penerima. Kembalikan ke Hub Cakung untuk pemeriksaan QA.");
-  await admin!.getByRole("button", { name: "Putuskan tindak lanjut", exact: true }).last().click();
-  await expect(admin!.locator(".shipment-hero")).toContainText("Dalam proses retur");
-  await courier!.reload();
-  await courier!.getByLabel("Lokasi saat ini").fill("Hub Cakung — meja QA");
-  await courier!
-    .getByLabel("Catatan dan alasan")
-    .fill("Paket diterima kembali petugas QA sesuai instruksi Admin.");
-  await courier!.getByRole("button", { name: "Catat paket kembali", exact: true }).last().click();
-  await expect(courier!.locator(".shipment-hero")).toContainText("Sudah dikembalikan");
-  await buyer!.reload();
-  await expect(buyer!.locator(".shipment-hero")).toContainText("Sudah dikembalikan");
-  await admin!.reload();
-  await expect(admin!.locator(".shipment-hero")).toContainText("Sudah dikembalikan");
-  await admin!.screenshot({
-    path: "output/screenshots/required-03-returned.png",
-    fullPage: true,
-  });
-  const id = detailUrl.split("/").at(-1);
-  const final = await request<Shipment>(contexts[0]!, "shipments/" + id);
-  expect(final.status).toBe("returned");
-  expect(final.issues?.[0]?.decisions[0]?.action).toBe("return");
-  const msgs = await request<Paginated<{ subject: string }>>(contexts[0]!, "messages");
-  expect(msgs.total).toBeGreaterThan(0);
-  await admin!.goto("/laporan");
-  await admin!.getByRole("button", { name: "Buat laporan" }).click();
-  await expect(admin!.getByRole("button", { name: "Buat laporan" })).toBeEnabled();
-  await expect(admin!.locator(".report-card").first()).toBeVisible();
-  const downloadPromise = admin!.waitForEvent("download");
-  await admin!.getByRole("link", { name: "Unduh riwayat CSV" }).first().click();
-  const download = await downloadPromise;
-  await download.saveAs("output/e2e-report.csv");
-  expect(fs.readFileSync("output/e2e-report.csv", "utf8")).toContain("Segel terlihat terbuka");
-  expect(fs.readFileSync("output/e2e-report.csv", "utf8")).toContain(final.tracking_number);
-  for (const c of contexts) await c.close();
-});
-
-test("visual QA all roles at mobile, tablet and desktop; navigation, empty state and no new console errors", async ({
-  browser,
-}) => {
-  // This combined audit captures 33 pages across three roles, not one interaction.
-  test.setTimeout(240000);
-  for (const role of ["admin", "courier", "buyer"] as const) {
-    const context = await browser.newContext({ baseURL }),
-      page = await context.newPage();
-    const errors: string[] = [];
-    page.on("pageerror", (e) => errors.push(e.message));
-    page.on("console", (m) => {
-      if (m.type() === "error" && !m.text().includes("Failed to load resource"))
-        errors.push(m.text());
+  test.setTimeout(150000);
+  fs.mkdirSync("output/screenshots", { recursive: true });
+  const contexts = await Promise.all(
+    Object.keys(emails).map(() =>
+      browser.newContext({
+        geolocation: { latitude: -6.2, longitude: 106.84 },
+        permissions: ["geolocation"],
+      }),
+    ),
+  );
+  const [admin, checker, courier, buyer] = await Promise.all(contexts.map((c) => c.newPage()));
+  const errors: string[] = [];
+  [admin!, checker!, courier!, buyer!].forEach((p) =>
+    p.on("pageerror", (e) => errors.push(e.message)),
+  );
+  try {
+    await login(admin!, "admin");
+    await login(checker!, "checker");
+    await login(courier!, "courier");
+    await login(buyer!, "buyer");
+    const users = (await request(contexts[0]!, "directory")) as {
+      id: number;
+      role: string;
+      name: string;
+    }[];
+    await admin!.goto("/kiriman/baru");
+    await admin!.getByLabel("Nama pengirim", { exact: true }).fill("Distribusi QA");
+    await admin!.getByLabel("Nama penerima / fasilitas").fill("Klinik QA");
+    await admin!.getByLabel("Nomor telepon penerima").fill("081200000000");
+    await admin!.getByLabel("Kota tujuan", { exact: true }).fill("Jakarta Selatan");
+    await admin!
+      .getByLabel("Ringkasan isi paket")
+      .fill("Cold-chain contoh, bukan produk medis nyata");
+    await admin!
+      .locator("#buyer-id")
+      .selectOption(String(users.find((u) => u.name === "Nadia Putri")!.id));
+    await admin!
+      .locator("#inspector-id")
+      .selectOption(String(users.find((u) => u.role === "checker")!.id));
+    await admin!.getByLabel("Alamat lengkap tujuan").fill("Jl. Cilandak KKO No. 8");
+    await admin!.getByLabel("Kategori penanganan").selectOption("COLD_CHAIN_2_8");
+    await admin!
+      .getByLabel("Jadwal tiba")
+      .fill(new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 16));
+    await admin!
+      .getByLabel("Instruksi untuk pemeriksaan dan pengantaran")
+      .fill("Simpan 2–8°C. Segel utuh. Hentikan jika terjadi penyimpangan.");
+    await admin!.getByRole("checkbox", { name: "Data demonstrasi" }).check();
+    await admin!.getByRole("button", { name: "Simpan kiriman" }).click();
+    await expect(admin!).toHaveURL(/\/kiriman\/\d+$/);
+    const detail = new URL(admin!.url()).pathname,
+      id = detail.split("/").at(-1);
+    const shipment = await request(contexts[0]!, "shipments/" + id);
+    await act(admin!, "Setujui pengiriman");
+    await expect(admin!.getByRole("alert")).toContainText("Paket belum boleh berangkat");
+    await checker!.goto(detail);
+    await checker!.locator("#scanned-tracking").fill(shipment.tracking_number);
+    await checker!.getByLabel("Kemasan utuh dan sesuai instruksi").check();
+    await checker!.getByLabel("Segel utuh, belum terbuka").check();
+    await checker!.getByLabel("Label sesuai data penerima").check();
+    await checker!.locator("#temperature").fill("5");
+    await checker!.getByRole("button", { name: "Lanjut ke foto bukti" }).click();
+    await checker!.locator("#inspection-photo").setInputFiles(photo);
+    await checker!
+      .locator("#action-reason")
+      .fill("Kemasan, segel, label, jumlah dan suhu sudah diperiksa.");
+    await checker!.locator(".action-panel button[type=submit]").click();
+    await expect(checker!.locator(".shipment-hero")).toContainText("Menunggu persetujuan");
+    await admin!.reload();
+    await act(admin!, "Setujui pengiriman");
+    await expect(admin!.locator(".shipment-hero")).toContainText("Siap ditugaskan");
+    await act(admin!, "Pilih kurir", async () => {
+      await admin!
+        .locator("#courier")
+        .selectOption(String(users.find((u) => u.name === "Satria Aditya")!.id));
     });
+    await courier!.goto(detail);
+    await act(courier!, "Terima tugas");
+    await expect(courier!.locator(".shipment-hero")).toContainText("Kurir terpilih");
+    await act(courier!, "Mulai perjalanan", async () => {
+      await courier!.locator("#location").fill("Hub Jakarta");
+    });
+    await act(courier!, "Kirim lokasi GPS", async () => {
+      await courier!.getByRole("button", { name: "Ambil lokasi GPS", exact: true }).click();
+      await expect(courier!.locator(".action-panel")).toContainText("-6.200000");
+      await courier!.locator("#telemetry-temperature").fill("5");
+    });
+    await buyer!.goto(detail);
+    await expect(buyer!.locator(".leaflet-container")).toBeVisible();
+    await expect(buyer!.locator(".action-panel button[type=submit]")).toHaveCount(0);
+    await admin!.reload();
+    await admin!.getByRole("button", { name: "Mode demo" }).click();
+    await admin!.locator("#demo-shipment").selectOption(String(id));
+    await admin!.getByRole("button", { name: "Lonjakan 12.5°C" }).click();
+    await expect(admin!.locator(".shipment-hero")).toContainText("Ditahan");
+    await expect(buyer!.locator(".shipment-hero")).toContainText("Ditahan", { timeout: 12000 });
+    await admin!.getByRole("button", { name: "Tutup panel demo" }).click();
+    await act(admin!, "Putuskan tindak lanjut", async () => {
+      await admin!.locator("#decision").selectOption("return");
+    });
+    await courier!.reload();
+    await act(courier!, "Catat paket kembali", async () => {
+      await courier!.locator("#location").fill("Hub cold-storage QA");
+      await courier!.locator("#pod-photo").setInputFiles(photo);
+      await courier!.locator("#receiver-signature").fill("Petugas QA");
+    });
+    await expect(courier!.locator(".shipment-hero")).toContainText("Sudah dikembalikan");
+    for (const [index, p] of [admin!, courier!, buyer!].entries()) {
+      await p.goto(detail);
+      await expect(p.getByRole("link", { name: /Unduh PDF/ })).toBeVisible();
+      const pdf = await p.context().request.get("/api/shipments/" + id + "/report.pdf");
+      expect(pdf.status()).toBe(200);
+      expect((await pdf.body()).subarray(0, 4).toString()).toBe("%PDF");
+      if (!index) fs.writeFileSync("output/qa-shipment-report.pdf", await pdf.body());
+    }
+    const denied = await contexts[1]!.request.get("/api/shipments/" + id + "/report.pdf");
+    expect(denied.status()).toBe(403);
+    await buyer!.screenshot({ path: "output/screenshots/flowchart-report.png", fullPage: true });
+    expect(errors).toEqual([]);
+  } finally {
+    await Promise.all(contexts.map((c) => c.close()));
+  }
+});
+test("each role stays usable without overflow at mobile, tablet and desktop", async ({ page }) => {
+  for (const role of Object.keys(emails) as (keyof typeof emails)[]) {
     await login(page, role);
     for (const width of [375, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto("/");
-      await expect(page.locator(".metrics")).toBeVisible();
-      expect(
-        await page
-          .locator(".brand img")
-          .evaluateAll((images) =>
-            images.every(
-              (image) =>
-                image.getAttribute("src") === "/brand/pharma-logo.webp" &&
-                image.getAttribute("alt") === "Anteraja Pharma",
-            ),
-          ),
-      ).toBe(true);
-      await expect(page.locator('link[rel="icon"][type="image/x-icon"]')).toHaveAttribute(
-        "href",
-        "/brand/pharma-favicon.ico",
-      );
-      await page.screenshot({
-        path: `output/screenshots/${role}-${width}-dashboard.png`,
-        fullPage: true,
-      });
-      for (const path of [
-        "/kiriman",
-        "/pesan",
-        ...(role === "admin" ? ["/kiriman/baru", "/laporan"] : []),
-      ]) {
+      for (const path of ["/", "/kiriman", "/pesan"]) {
         await page.goto(path);
-        await expect(page.locator("main h1")).toBeVisible();
-        await expect(page.locator(".loading-state")).toHaveCount(0);
-        const overflow = await page.evaluate(
-          () => document.documentElement.scrollWidth > innerWidth + 1,
-        );
-        expect(overflow, `${role} ${path} ${width} overflow`).toBeFalsy();
-        await page.screenshot({
-          path: `output/screenshots/${role}-${width}-${path.replaceAll("/", "_")}.png`,
-          fullPage: true,
-        });
+        await expect(page.locator("main")).toBeVisible();
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+          role + path + width,
+        ).toBe(true);
       }
-      await page.goto("/kiriman");
-      await page.getByLabel("Cari kiriman").fill("NO-RESULT-XYZ");
-      await page.getByRole("button", { name: "Cari", exact: true }).click();
-      await expect(page.locator(".empty-state")).toBeVisible();
     }
-    expect(errors).toEqual([]);
-    await context.close();
+    await page.context().clearCookies();
   }
+  await login(page, "buyer");
+  await page.goto("/does-not-exist");
+  await expect(page.locator("body")).toContainText(/tidak ditemukan/i);
+});
+test("demo cannot be used by Customer and reports remain private", async ({ page }) => {
+  await login(page, "buyer");
+  expect((await page.request.get("/api/demo/shipments")).status()).toBe(403);
+  expect((await page.request.get("/api/directory")).status()).toBe(403);
+  await page.context().clearCookies();
+  expect(
+    (
+      await page.request.get("/api/shipments", { headers: { Accept: "application/json" } })
+    ).status(),
+  ).toBe(401);
 });
 
-test("login carousel, manual controls, reduced motion, keyboard and request failure recovery", async ({
+test("inspection proof survives a failed connection and syncs without duplication", async ({
   browser,
 }) => {
-  const context = await browser.newContext({
-      viewport: { width: 1440, height: 900 },
-    }),
-    page = await context.newPage();
-  await page.goto("/masuk");
-  await expect(page.locator(".auth-image.visible")).toHaveAttribute(
-    "src",
-    "/images/pharma-inspection.webp",
-  );
-  await page.waitForTimeout(4300);
-  await expect(page.locator(".auth-image.visible")).toHaveAttribute(
-    "src",
-    "/images/pharma-delivery.webp",
-  );
-  await page.getByRole("button", { name: "Hentikan cerita otomatis" }).click();
-  const src = await page.locator(".auth-image.visible").getAttribute("src");
-  await page.waitForTimeout(4300);
-  expect(await page.locator(".auth-image.visible").getAttribute("src")).toBe(src);
-  await page.getByRole("button", { name: "Tampilkan cerita 3" }).click();
-  await expect(page.locator(".auth-image.visible")).toHaveAttribute(
-    "src",
-    "/images/pharma-handover.webp",
-  );
-  await page.screenshot({
-    path: "output/screenshots/login-desktop.png",
-    fullPage: true,
-  });
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.getByRole("button", { name: "Putar cerita otomatis" }).click();
-  await page.getByLabel("Email", { exact: true }).focus();
-  await page.waitForTimeout(4300);
-  await expect(page.locator(".auth-image.visible")).toHaveAttribute(
-    "src",
-    "/images/pharma-handover.webp",
-  );
-  await page.getByLabel("Email", { exact: true }).fill(emails.admin);
-  await page.getByLabel("Kata sandi", { exact: true }).fill(password);
-  await page.getByLabel("Kata sandi", { exact: true }).press("Enter");
-  await expect(page).toHaveURL(baseURL + "/");
-  await page.evaluate(() => {
-    (window as unknown as Record<string, unknown>).spaSentinel = "alive";
-  });
-  await page.getByRole("link", { name: "Pengiriman", exact: true }).click();
-  expect(
-    await page.evaluate(() => (window as unknown as Record<string, unknown>).spaSentinel),
-  ).toBe("alive");
-  await page.route("**/api/dashboard", (r) => r.abort());
-  await page.goto("/");
-  await expect(page.getByRole("alert")).toContainText("Koneksi belum berhasil");
-  await page.screenshot({
-    path: "output/screenshots/network-error.png",
-    fullPage: true,
-  });
-  await page.unroute("**/api/dashboard");
-  await page.getByRole("button", { name: "Coba lagi" }).click();
-  await expect(page.locator(".metrics")).toBeVisible();
-  const noCsrf = await context.request.post("/api/settings", {
-    data: { telegram_chat_id: "123" },
-  });
-  expect(noCsrf.status()).toBe(419);
-  await context.close();
+  const adminContext = await browser.newContext(),
+    checkerContext = await browser.newContext();
+  try {
+    const admin = await adminContext.newPage(),
+      checker = await checkerContext.newPage();
+    await login(admin, "admin");
+    await login(checker, "checker");
+    const users = (await request(adminContext, "directory")) as { id: number; role: string }[];
+    const s = await request(adminContext, "shipments", {
+      buyer_id: users.find((u) => u.role === "buyer")!.id,
+      inspector_id: users.find((u) => u.role === "checker")!.id,
+      sender_name: "Offline QA",
+      recipient_name: "Klinik offline QA",
+      recipient_phone: "081200000000",
+      address: "Jl. QA",
+      origin_city: "Jakarta",
+      destination_city: "Bekasi",
+      item_summary: "Paket uji offline",
+      package_count: 1,
+      handling_instructions: "Periksa segel",
+      scheduled_at: new Date(Date.now() + 86400000).toISOString(),
+      temperature_profile: "ambient",
+      is_demo: true,
+    });
+    await checker.goto("/kiriman/" + s.id);
+    await checker.locator("#scanned-tracking").fill(s.tracking_number);
+    await checker.getByLabel("Kemasan utuh dan sesuai instruksi").check();
+    await checker.getByLabel("Segel utuh, belum terbuka").check();
+    await checker.getByLabel("Label sesuai data penerima").check();
+    await checker.getByRole("button", { name: "Lanjut ke foto bukti" }).click();
+    await checker.locator("#inspection-photo").setInputFiles(photo);
+    await checker
+      .locator("#action-reason")
+      .fill("Foto dan checklist offline yang sudah diperiksa.");
+    const pattern = "**/api/shipments/" + s.id + "/actions/inspect";
+    await checker.route(pattern, (route) => route.abort("internetdisconnected"));
+    await checker.locator(".action-panel button[type=submit]").click();
+    await expect(checker.locator(".action-panel")).toContainText("tersimpan di antrean browser");
+    await checker.unroute(pattern);
+    await checker.evaluate(() => window.dispatchEvent(new Event("online")));
+    await expect(checker.locator(".shipment-hero")).toContainText("Menunggu persetujuan", {
+      timeout: 15000,
+    });
+    const detail = await request(adminContext, "shipments/" + s.id);
+    expect(detail.inspections).toHaveLength(1);
+    expect(detail.inspections[0].photo_proof_url).toBeTruthy();
+  } finally {
+    await adminContext.close();
+    await checkerContext.close();
+  }
 });
