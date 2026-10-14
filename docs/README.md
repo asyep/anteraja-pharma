@@ -21,6 +21,8 @@ docs/
 │   ├── FRD-04-automasi-ai-dan-penyimpangan.md # Automasi AI, Deteksi Anomali & Predictive Cold-Chain
 │   ├── FRD-05-pelaporan-dan-penutupan.md      # Auto-Report PDF/BAP & Penutupan Pengiriman
 │   └── FRD-06-control-panel-simulator.md      # Control Panel Simulator (Hackathon Demo Mode)
+├── database/
+│   └── schema.md                              # Skema Database, Kamus Data & Relasi ERD
 ├── diagrams/
 │   └── flowchart.png                          # Diagram Alur Kerja Sistem (Workflow Architecture)
 └── references/
@@ -46,12 +48,15 @@ Sistem dipecah ke dalam 6 modul fungsional terintegrasi:
 | **FR-05** | [FRD-05: Pelaporan & Penutupan](./frd/FRD-05-pelaporan-dan-penutupan.md) | Penyusunan otomatis Berita Acara Pemeriksaan (BAP) PDF dan distribusi paralel via WA/Email. | Automation AI, Semua Aktor |
 | **FR-06** | [FRD-06: Control Panel Simulator](./frd/FRD-06-control-panel-simulator.md) | Panel kendali simulasi demo hackathon (suhu melonjak, signal drop, fast-forward timeline). | Presenter / Demo Ops |
 
-### 3. Diagram Arsitektur & Alur Kerja
+### 3. Skema Database & ERD
+* **[schema.md](./database/schema.md)**: Dokumentasi teknis struktur basis data PostgreSQL/Supabase, diagram relasi entitas (*ERD*), kamus data lengkap (*data dictionary*), kunci unik/indeks, status enum, serta pola integritas data CPOB (*append-only audit trail* & *optimistic locking*).
+
+### 4. Diagram Arsitektur & Alur Kerja
 * **[flowchart.png](./diagrams/flowchart.png)**: Diagram arsitektur visual alur kerja interaksi antara Admin, Checker, Kurir, Customer, dan Automation AI Engine.
 
 ![Pharma Logistics Architecture Flowchart](./diagrams/flowchart.png)
 
-### 4. Dokumen Referensi Bisnis
+### 5. Dokumen Referensi Bisnis
 * **[Business_Acumen_Pharma_Anteraja.pdf](./references/Business_Acumen_Pharma_Anteraja.pdf)**: Pedoman kepatuhan regulasi farmasi, prinsip Cara Pembuatan Obat yang Baik (CPOB), dan analisis *business impact*.
 
 ---
