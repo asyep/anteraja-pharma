@@ -1,0 +1,16 @@
+.git
+.private
+.private-build
+.agents
+.env*
+server/.env*
+server/vendor
+server/storage
+server/bootstrap/cache/*.php
+node_modules
+output
+test-results
+playwright-report
+*.log
+*.zip
+*.apk

@@ -1,0 +1,28 @@
+<?php
+
+return [
+    'required' => 'Lengkapi :attribute sebelum melanjutkan.',
+    'required_if' => ':attribute wajib diisi untuk pilihan ini.',
+    'email' => 'Masukkan alamat email yang valid.',
+    'string' => ':attribute harus berupa teks.',
+    'integer' => ':attribute harus berupa angka bulat.',
+    'numeric' => ':attribute harus berupa angka.',
+    'boolean' => ':attribute harus berupa pilihan ya atau tidak.',
+    'max' => ['string' => ':attribute maksimal :max karakter.', 'numeric' => ':attribute maksimal :max.'],
+    'min' => ['string' => ':attribute minimal :min karakter.', 'numeric' => ':attribute minimal :min.'],
+    'between' => ['numeric' => ':attribute harus berada di antara :min dan :max.'],
+    'in' => 'Pilihan :attribute tidak tersedia.',
+    'exists' => 'Pilihan :attribute tidak ditemukan atau bukan peran yang sesuai.',
+    'date' => 'Masukkan tanggal :attribute yang valid.',
+    'date_format' => 'Format :attribute harus :format.',
+    'after' => ':attribute harus lebih baru dari waktu sekarang.',
+    'before_or_equal' => ':attribute tidak boleh berada di masa depan.',
+    'gte' => ['numeric' => ':attribute harus lebih besar atau sama dengan :value.'],
+    'regex' => 'Format :attribute belum sesuai.',
+    'attributes' => ['email' => 'email', 'password' => 'kata sandi', 'reason' => 'catatan dan alasan', 'buyer_id' => 'akun pembeli', 'inspector_id' => 'petugas pemeriksaan',
+        'courier_id' => 'Satria', 'packaging' => 'kondisi kemasan', 'seal' => 'kondisi segel', 'label' => 'kondisi label', 'temperature' => 'suhu',
+        'temperature_min' => 'batas bawah suhu', 'temperature_max' => 'batas atas suhu', 'scheduled_at' => 'jadwal tiba', 'version' => 'versi data',
+        'sender_name' => 'nama pengirim', 'recipient_name' => 'nama penerima', 'recipient_phone' => 'telepon penerima', 'address' => 'alamat',
+        'item_summary' => 'ringkasan isi paket', 'handling_instructions' => 'instruksi penanganan', 'package_count' => 'jumlah paket', 'date' => 'tanggal laporan',
+        'telegram_chat_id' => 'chat ID Telegram', 'sender_chat_id' => 'chat ID pengirim', 'per_page' => 'jumlah baris per halaman', 'received_by' => 'nama penerima paket'],
+];
