@@ -3,6 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { resolvePhpBinary } from "./php-binary.mjs";
+import { readDemoAccounts } from "./demo-accounts.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const php = resolvePhpBinary();
@@ -25,14 +26,9 @@ for (const directory of [
 fs.mkdirSync(path.join(root, ".private"), { recursive: true });
 const envFile = path.join(backend, ".env");
 if (!fs.existsSync(envFile)) {
-  const password = crypto.randomBytes(10).toString("base64url") + "!a7";
   fs.writeFileSync(
     envFile,
-    `APP_NAME="Anteraja Pharma"\nAPP_ENV=local\nPHARMA_DEMO_ENABLED=true\nAPP_KEY=base64:${crypto.randomBytes(32).toString("base64")}\nAPP_DEBUG=false\nAPP_URL=http://localhost:8170\nFRONTEND_URL=http://localhost:3170\nDB_CONNECTION=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=anteraja_pharma_hackathon\nDB_USERNAME=root\nDB_PASSWORD=\nSESSION_DRIVER=file\nSESSION_COOKIE=pharma_session\nSESSION_SAME_SITE=lax\nSESSION_LIFETIME=120\nCACHE_STORE=file\nQUEUE_CONNECTION=database\nLOG_CHANNEL=stack\nDEMO_PASSWORD=${password}\nAUTOMATION_WEBHOOK_SECRET=${crypto.randomBytes(32).toString("hex")}\nTELEGRAM_WEBHOOK_SECRET=${crypto.randomBytes(24).toString("hex")}\nTELEGRAM_BOT_TOKEN=\nTELEGRAM_ADMIN_CHAT_ID=\nTELEGRAM_COURIER_CHAT_ID=\nTELEGRAM_BUYER_CHAT_ID=\nTELEGRAM_SENDER_CHAT_ID=\n`,
-  );
-  fs.writeFileSync(
-    path.join(root, ".private", "akun-demo.txt"),
-    `akun contoh, hanya untuk lokal\nadmin: admin@pharma.test\nsatria: satria@pharma.test\npembeli: pembeli@pharma.test\npassword ketiganya: ${password}\njangan bagikan file ini atau masukkan ke git.\n`,
+    `APP_NAME="Anteraja Pharma"\nAPP_ENV=local\nPHARMA_DEMO_ENABLED=true\nAPP_KEY=base64:${crypto.randomBytes(32).toString("base64")}\nAPP_DEBUG=false\nAPP_URL=http://localhost:8170\nFRONTEND_URL=http://localhost:3170\nDB_CONNECTION=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=anteraja_pharma_hackathon\nDB_USERNAME=root\nDB_PASSWORD=\nSESSION_DRIVER=file\nSESSION_COOKIE=pharma_session\nSESSION_SAME_SITE=lax\nSESSION_LIFETIME=120\nCACHE_STORE=file\nQUEUE_CONNECTION=database\nLOG_CHANNEL=stack\nAUTOMATION_WEBHOOK_SECRET=${crypto.randomBytes(32).toString("hex")}\nTELEGRAM_WEBHOOK_SECRET=${crypto.randomBytes(24).toString("hex")}\nTELEGRAM_BOT_TOKEN=\nTELEGRAM_ADMIN_CHAT_ID=\nTELEGRAM_COURIER_CHAT_ID=\nTELEGRAM_BUYER_CHAT_ID=\nTELEGRAM_SENDER_CHAT_ID=\n`,
   );
 }
 let envText = fs.readFileSync(envFile, "utf8");
@@ -54,14 +50,11 @@ function ensureEnvValue(key, generatedValue) {
   return generatedValue;
 }
 ensureEnvValue("APP_KEY", `base64:${crypto.randomBytes(32).toString("base64")}`);
-const demoPassword = ensureEnvValue(
-  "DEMO_PASSWORD",
-  crypto.randomBytes(10).toString("base64url") + "!a7",
-);
+const { users: demoUsers } = readDemoAccounts();
 if (envChanged) fs.writeFileSync(envFile, envText);
 fs.writeFileSync(
   path.join(root, ".private", "akun-demo.txt"),
-  `akun contoh, hanya untuk lokal\nadmin: admin@pharma.test\nchecker: checker@pharma.test\nkurir: satria@pharma.test\nvendor: vendor@pharma.test\ncustomer: customer@pharma.test\nkurir lain: satria.lain@pharma.test\npassword semua akun: ${demoPassword}\njangan bagikan file ini atau masukkan ke git.\n`,
+  `akun contoh untuk demo\nsumber: server/database/seeders/DatabaseSeeder.php\n${demoUsers.map(u => `${u.role}: ${u.email} | ${u.password}`).join("\n")}\npassword berbeda per role; jangan gunakan untuk akun produksi nyata.\n`,
   { mode: 0o600 },
 );
 for (const args of [

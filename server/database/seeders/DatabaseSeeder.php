@@ -7,25 +7,53 @@ use App\Models\User;
 use App\Services\WorkflowService;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
+
+    // demo-only credentials; never use these for real staff or customer accounts.
+    public const DEMO_PASSWORDS = [
+        'admin' => 'PharmaAdmin!2026',
+        'checker' => 'PharmaChecker!2026',
+        'courier' => 'PharmaKurir!2026',
+        'buyer' => 'PharmaCustomer!2026',
+    ];
+
+    public const DEMO_USERS = [
+        ['admin', 'Rina Pramesti', 'admin@pharma.test'],
+        ['checker', 'Dimas Saputra', 'checker@pharma.test'],
+        ['courier', 'Satria Aditya', 'satria@pharma.test'],
+        ['buyer', 'Nadia Putri', 'vendor@pharma.test'],
+        ['buyer', 'Arif Wijaya', 'customer@pharma.test'],
+        ['courier', 'Budi Santoso', 'satria.lain@pharma.test'],
+        ['buyer', 'Pembeli demo lama', 'pembeli@pharma.test'],
+    ];
+
+    public function seedDemoUsers(): array
+    {
+        $users = [];
+        foreach (self::DEMO_USERS as [$role, $name, $email]) {
+            $password = self::DEMO_PASSWORDS[$role];
+            $user = User::firstOrCreate(['email' => $email], [
+                'name' => $name, 'role' => $role, 'password' => $password,
+                'telegram_chat_id' => config('pharma.'.$role.'_chat_id'),
+            ]);
+            if ($user->role !== $role) throw new \RuntimeException('Role akun demo tidak cocok: '.$email);
+            // update only known demo accounts; preserve names, ownership and contact settings.
+            if (!Hash::check($password, $user->password)) $user->update(['password' => $password]);
+            $users[$email] = $user;
+        }
+        return $users;
+    }
 
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        $password = config('pharma.demo_password');
-        if (! $password) {
-            throw new \RuntimeException('Pasang DEMO_PASSWORD lokal sebelum menjalankan seed.');
-        }
-        $people = [['admin', 'Rina Pramesti', 'admin@pharma.test'], ['checker', 'Dimas Saputra', 'checker@pharma.test'], ['courier', 'Satria Aditya', 'satria@pharma.test'], ['buyer', 'Nadia Putri', 'vendor@pharma.test'], ['buyer', 'Arif Wijaya', 'customer@pharma.test'], ['courier', 'Budi Santoso', 'satria.lain@pharma.test']];
-        $users = [];
-        foreach ($people as [$role,$name,$email]) {
-            $users[$email] = User::firstOrCreate(['email' => $email], ['name' => $name, 'role' => $role, 'password' => $password, 'telegram_chat_id' => config('pharma.'.$role.'_chat_id')]);
-        }
+        $users = $this->seedDemoUsers();
         $admin = $users['admin@pharma.test'];
         $checker = $users['checker@pharma.test'];
         $courier = $users['satria@pharma.test'];

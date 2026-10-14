@@ -1,7 +1,7 @@
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import fs from "node:fs";
-const env = fs.readFileSync(new URL("../../../server/.env", import.meta.url), "utf8");
-const password = process.env.DEMO_PASSWORD || env.match(/^DEMO_PASSWORD=(.+)$/m)?.[1]?.trim();
+import { readDemoAccounts } from '../../tools/demo-accounts.mjs';
+const { passwords } = readDemoAccounts();
 const emails = {
   admin: "admin@pharma.test",
   checker: "checker@pharma.test",
@@ -17,10 +17,9 @@ const photo = {
   ),
 };
 async function login(page: Page, role: keyof typeof emails) {
-  if (!password) throw new Error("Set DEMO_PASSWORD locally before running tests.");
   await page.goto("/masuk");
   await page.getByLabel("Email", { exact: true }).fill(emails[role]);
-  await page.getByLabel("Kata sandi", { exact: true }).fill(password);
+  await page.getByLabel("Kata sandi", { exact: true }).fill(passwords[role]);
   for (let attempt = 0; attempt < 2; attempt++) {
     const response = page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/api/login'));
     await page.getByRole('button', { name: 'Masuk ke Pharma' }).click();

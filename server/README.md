@@ -25,6 +25,8 @@ Jika folder saudara client tersedia, npm run setup dan npm run dev dari client m
 
 ## Role dan transisi
 
+Password akun demo berbeda per role dan ditentukan langsung di DatabaseSeeder.php pada DEMO_PASSWORDS, bukan .env. Seeder memperbarui password akun demo yang terdaftar ketika diulang, tanpa mengganti password akun lain; model User menyimpan hash, bukan plaintext. Jangan gunakan credential demo ini untuk akun produksi nyata.
+
 Admin membuat instruksi, memilih Checker, menyetujui hasil, memilih kurir aktif yang memiliki kapasitas cold-box, serta memutuskan kendala. Checker hanya memeriksa paket yang ditugaskan. Kurir menjawab tugas, memulai perjalanan, mengirim GPS/suhu, melaporkan kendala dan mencatat POD. Vendor / Customer hanya melihat paket miliknya beserta laporan.
 
 Pemeriksaan gagal menghasilkan HOLD. Persetujuan harus merujuk pemeriksaan terakhir yang lulus. Penugasan, telemetry dan tindakan memakai transaksi/row lock; aksi memiliki versi dan request/event ID untuk retry idempoten.
