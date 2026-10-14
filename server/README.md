@@ -1,25 +1,37 @@
 # Backend Anteraja Pharma
 
-Laravel 12 menjaga autentikasi, akses peran, aturan pemeriksaan/persetujuan, penugasan, keputusan kendala, audit, Telegram dan laporan. Frontend Vue berada di folder frontend pada root project. Tidak ada server JavaScript backend maupun database capstone yang dipakai ulang.
+API Laravel 12 untuk autentikasi, role, workflow pemeriksaan/persetujuan, penugasan, telemetry, evaluasi otomatis, audit trail, dan laporan sesuai kebutuhan di `../docs/`. Frontend Vue ada di `../client/`.
 
-Jalankan aplikasi dari root menggunakan npm run dev. Panduan lengkap ada di ../how_to_run.txt dan ../README.md.
-
-Untuk menjalankan API saja dari folder ini:
+## Menyiapkan dan menjalankan
 
 ```powershell
-& C:\xampp\php\php.exe artisan serve --host=127.0.0.1 --port=8170
+composer install
 ```
 
-Scheduler:
+Gunakan PHP CLI dari `PATH` (atau set `PHP_BINARY` ke path yang benar) dengan ekstensi `pdo_pgsql` aktif. Salin `.env.example` menjadi `.env`, isi kredensial PostgreSQL dan database khusus proyek ini, serta buat `APP_KEY`. Konfigurasi default memakai `DB_CONNECTION=pgsql` dan port `5432`. Jalankan migrasi dengan `php artisan migrate`. Jangan gunakan `migrate:fresh` pada database yang berisi data yang perlu dipertahankan.
+
+Untuk menjalankan API saja:
 
 ```powershell
-& C:\xampp\php\php.exe artisan schedule:work
+php artisan serve --host=127.0.0.1 --port=8170
 ```
 
-Regression tests tanpa menyentuh database demo:
+Scheduler perlu aktif untuk mendeteksi telemetry yang terputus:
 
 ```powershell
-& C:\xampp\php\php.exe vendor/phpunit/phpunit/phpunit -c phpunit.xml --bootstrap vendor/autoload.php
+php artisan schedule:work
 ```
 
-Lihat app/Services/WorkflowService.php untuk aturan transisi, routes/web.php untuk API, dan database/migrations untuk skema. Credential hanya pada .env yang di-ignore Git. Database harus bernama khusus anteraja_pharma_hackathon untuk setup otomatis; jangan gunakan migrate:fresh pada database lama.
+## Konfigurasi AI
+
+`OPENAI_API_KEY` dan `OPENAI_MODEL` opsional dan dibaca server dari `.env`. Jangan menaruh key di frontend, source control, log, atau screenshot. Evaluasi batas suhu dan penentuan status insiden dilakukan dengan aturan deterministik; OpenAI hanya membantu membuat ringkasan Bahasa Indonesia. Jika layanan tidak tersedia, sistem menggunakan ringkasan lokal.
+
+## Tes
+
+Jalankan Feature tests tanpa menyentuh database demo:
+
+```powershell
+php vendor/phpunit/phpunit/phpunit -c phpunit.xml --bootstrap vendor/autoload.php --testsuite Feature
+```
+
+Aturan transisi ada di `app/Services/WorkflowService.php`, endpoint di `routes/web.php`, dan skema database di `database/migrations/`.

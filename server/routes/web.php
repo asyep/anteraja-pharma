@@ -19,6 +19,8 @@ Route::prefix('api')->group(function () {
         Route::get('shipments', [PharmaController::class, 'index']);
         Route::post('shipments', [PharmaController::class, 'create']);
         Route::get('shipments/{id}', [PharmaController::class, 'detail'])->whereNumber('id');
+        Route::get('shipments/{id}/inspections/{inspection}/photo', [PharmaController::class, 'inspectionPhoto'])->whereNumber(['id', 'inspection']);
+        Route::post('shipments/{id}/telemetry', [PharmaController::class, 'telemetry'])->whereNumber('id')->middleware('throttle:120,1');
         Route::post('shipments/{id}/actions/{action}', [PharmaController::class, 'action'])->whereNumber('id')->middleware('throttle:60,1');
         Route::get('messages', [PharmaController::class, 'messages']);
         Route::post('messages/{id}/retry', [PharmaController::class, 'retry'])->whereNumber('id');

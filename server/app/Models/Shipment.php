@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Shipment extends Model
 {
@@ -51,5 +52,20 @@ class Shipment extends Model
     public function events(): HasMany
     {
         return $this->hasMany(AuditEvent::class)->orderBy('id');
+    }
+
+    public function trackingPoints(): HasMany
+    {
+        return $this->hasMany(TrackingPoint::class)->orderBy('id');
+    }
+
+    public function aiEvaluations(): HasMany
+    {
+        return $this->hasMany(AiEvaluation::class)->orderBy('id');
+    }
+
+    public function finalReport(): HasOne
+    {
+        return $this->hasOne(FinalShipmentReport::class);
     }
 }

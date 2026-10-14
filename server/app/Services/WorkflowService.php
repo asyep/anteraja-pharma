@@ -6,14 +6,15 @@ use App\Models\AuditEvent;
 use App\Models\Shipment;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class WorkflowService
 {
     public const LABELS = [
         'inspection' => 'Menunggu pemeriksaan', 'pending_approval' => 'Menunggu persetujuan',
-        'approved' => 'Siap ditugaskan', 'assigned' => 'Menunggu jawaban Satria',
-        'accepted' => 'Satria siap mengambil', 'in_transit' => 'Dalam perjalanan',
+        'approved' => 'Siap ditugaskan', 'assigned' => 'Menunggu konfirmasi kurir',
+        'accepted' => 'Kurir siap mengambil', 'in_transit' => 'Dalam perjalanan',
         'arrived' => 'Sudah di lokasi penerima', 'held' => 'Ditahan untuk pemeriksaan',
         'returning' => 'Dalam proses retur', 'returned' => 'Sudah dikembalikan', 'delivered' => 'Sudah diterima',
     ];
@@ -42,20 +43,33 @@ class WorkflowService
                 abort_unless((int) $data['version'] === $s->version, 409, 'Data kiriman sudah berubah. Muat ulang sebelum melanjutkan.');
                 $before = $s->status;
                 $admin = $user->role === 'admin';
+                $checker = $user->role === 'checker' && $s->inspector_id === $user->id;
                 $assignment = $s->assignments()->latest('id')->first();
                 $courier = $user->role === 'courier' && $assignment && $assignment->courier_id === $user->id && $assignment->status === 'accepted';
                 $reason = $data['reason'] ?? '';
                 $title = '';
                 switch ($action) {
                     case 'inspect':
-                        abort_unless($admin || ($user->role === 'courier' && $s->inspector_id === $user->id), 403);
+                        abort_unless($admin || $checker, 403);
                         $this->need(in_array($s->status, ['inspection', 'pending_approval']) || ($s->status === 'held' && ! $s->issues()->where('status', 'open')->exists()), 'Pemeriksaan belum bisa diubah pada tahap ini. Tunggu instruksi Admin.');
                         $passed = $data['packaging'] && $data['seal'] && $data['label'];
                         if ($s->temperature_profile === 'controlled') {
                             $this->need(isset($data['temperature']), 'Catat suhu yang diukur untuk paket dengan penanganan suhu.');
                             $passed = $passed && $data['temperature'] >= $s->temperature_min && $data['temperature'] <= $s->temperature_max;
                         }
-                        $s->inspections()->create(['user_id' => $user->id, 'packaging' => $data['packaging'], 'seal' => $data['seal'], 'label' => $data['label'], 'temperature' => $data['temperature'] ?? null, 'note' => $reason, 'passed' => $passed]);
+                        $photoProof = $data['photo_proof'] ?? null;
+                        $this->need($photoProof !== null || config('pharma.demo_seed'), 'Foto bukti pemeriksaan wajib diunggah.');
+                        $proofPath = $photoProof?->store('inspection-proofs', 'local');
+                        $s->inspections()->create([
+                            'user_id' => $user->id,
+                            'packaging' => $data['packaging'],
+                            'seal' => $data['seal'],
+                            'label' => $data['label'],
+                            'temperature' => $data['temperature'] ?? null,
+                            'note' => $reason,
+                            'passed' => $passed,
+                            'photo_proof_path' => $proofPath,
+                        ]);
                         $s->status = $passed ? 'pending_approval' : 'inspection';
                         $title = $passed ? 'Pemeriksaan lengkap, menunggu Admin' : 'Pemeriksaan belum lengkap';
                         break;
@@ -79,31 +93,31 @@ class WorkflowService
                         abort_unless($admin, 403);
                         $this->need($s->status === 'approved', 'Penugasan diblokir. Paket harus selesai diperiksa dan disetujui Admin.');
                         $target = User::findOrFail($data['courier_id']);
-                        $this->need($target->role === 'courier', 'Pilih akun Satria untuk penugasan.');
+                        $this->need($target->role === 'courier', 'Pilih akun kurir untuk penugasan.');
                         $s->assignments()->create(['courier_id' => $target->id, 'assigned_by' => $user->id, 'status' => 'pending', 'reason' => $reason]);
                         $s->status = 'assigned';
-                        $title = 'Tugas dikirim ke '.$target->name;
+                        $title = 'Tugas dikirim ke kurir '.$target->name;
                         break;
                     case 'accept': case 'reject':
                         abort_unless($user->role === 'courier' && $assignment && $assignment->courier_id === $user->id, 403);
                         $this->need($s->status === 'assigned' && $assignment->status === 'pending', 'Tugas ini sudah dijawab atau tidak lagi tersedia.');
                         $assignment->update(['status' => $action === 'accept' ? 'accepted' : 'rejected', 'reason' => $reason, 'responded_at' => now()]);
                         $s->status = $action === 'accept' ? 'accepted' : 'approved';
-                        $title = $action === 'accept' ? 'Satria menerima tugas' : 'Tugas ditolak, Admin perlu menugaskan ulang';
+                        $title = $action === 'accept' ? 'Kurir menerima tugas' : 'Tugas ditolak, Admin perlu menugaskan ulang';
                         break;
                     case 'depart':
                         abort_unless($courier, 403);
                         $this->need($s->status === 'accepted', 'Paket belum siap berangkat.');
                         $s->status = 'in_transit';
                         $s->last_location = $data['location'];
-                        $title = 'Paket mulai diantar';
+                        $title = 'Kurir memulai perjalanan';
                         break;
                     case 'arrive':
                         abort_unless($courier, 403);
                         $this->need($s->status === 'in_transit', 'Paket belum dalam perjalanan.');
                         $s->status = 'arrived';
                         $s->last_location = $data['location'];
-                        $title = 'Satria sudah di lokasi penerima';
+                        $title = 'Kurir sudah di lokasi penerima';
                         break;
                     case 'issue':
                         abort_unless($courier || ($user->role === 'buyer' && $s->buyer_id === $user->id && in_array($s->status, ['in_transit', 'arrived'])), 403);
@@ -140,7 +154,7 @@ class WorkflowService
                         $s->status = 'returned';
                         $s->last_location = $data['location'];
                         $s->completed_at = now();
-                        $title = 'Paket sudah dikembalikan';
+                        $title = 'Kurir menyelesaikan retur';
                         break;
                     case 'deliver':
                         abort_unless($courier, 403);
@@ -167,6 +181,18 @@ class WorkflowService
                 $s->version++;
                 $s->save();
                 $this->event($s, $user, $action, $title, $reason, $before);
+                if (in_array($action, ['deliver', 'return_complete'], true)) {
+                    $report = app(FinalShipmentReportService::class)->publish($s);
+                    $this->event(
+                        $s,
+                        null,
+                        'report_published',
+                        'Laporan akhir diterbitkan',
+                        'Laporan perjalanan dibagikan kepada Admin, kurir, dan Vendor / Customer.',
+                        $s->status,
+                        ['report_id' => $report->report_id],
+                    );
+                }
 
                 return $s;
             }, 3);

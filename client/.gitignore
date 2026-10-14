@@ -1,14 +1,6 @@
 node_modules/
 dist/
 .private/
-backend/.env
-backend/.env.*
-!backend/.env.example
-backend/vendor/
-backend/storage/**/*.log
-backend/storage/app/private/**
-backend/bootstrap/cache/*.php
-backend/database/*.sqlite*
 test-results/
 playwright-report/
 *.log

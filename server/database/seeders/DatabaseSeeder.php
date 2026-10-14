@@ -21,14 +21,15 @@ class DatabaseSeeder extends Seeder
         if (! $password) {
             throw new \RuntimeException('Pasang DEMO_PASSWORD lokal sebelum menjalankan seed.');
         }
-        $people = [['admin', 'Rina Pramesti', 'admin@pharma.test'], ['courier', 'Dimas Saputra', 'satria@pharma.test'], ['buyer', 'Nadia Putri', 'pembeli@pharma.test'], ['buyer', 'Arif Wijaya', 'pembeli.lain@pharma.test'], ['courier', 'Satria Aditya', 'satria.lain@pharma.test']];
+        $people = [['admin', 'Rina Pramesti', 'admin@pharma.test'], ['checker', 'Dimas Saputra', 'checker@pharma.test'], ['courier', 'Satria Aditya', 'satria@pharma.test'], ['buyer', 'Nadia Putri', 'vendor@pharma.test'], ['buyer', 'Arif Wijaya', 'customer@pharma.test'], ['courier', 'Budi Santoso', 'satria.lain@pharma.test']];
         $users = [];
         foreach ($people as [$role,$name,$email]) {
             $users[$email] = User::firstOrCreate(['email' => $email], ['name' => $name, 'role' => $role, 'password' => $password, 'telegram_chat_id' => config('pharma.'.$role.'_chat_id')]);
         }
         $admin = $users['admin@pharma.test'];
+        $checker = $users['checker@pharma.test'];
         $courier = $users['satria@pharma.test'];
-        $buyer = $users['pembeli@pharma.test'];
+        $buyer = $users['vendor@pharma.test'];
         $flow = app(WorkflowService::class);
         config(['pharma.demo_seed' => true]);
         $places = [['Apotek Sehat Menteng', 'Jakarta Pusat', 'Jl. Pegangsaan Timur No. 16, Menteng'], ['Klinik Cilandak', 'Jakarta Selatan', 'Jl. Cilandak KKO No. 8'], ['Apotek Harapan Bekasi', 'Bekasi', 'Jl. Ahmad Yani No. 20'], ['Klinik Keluarga Serpong', 'Tangerang Selatan', 'Jl. Pahlawan Seribu No. 12']];
@@ -38,7 +39,7 @@ class DatabaseSeeder extends Seeder
                 continue;
             }
             $place = $places[($i - 1) % count($places)];
-            $s = Shipment::create(['tracking_number' => $tracking, 'buyer_id' => $i % 8 === 0 ? $users['pembeli.lain@pharma.test']->id : $buyer->id, 'inspector_id' => $courier->id, 'created_by' => $admin->id,
+            $s = Shipment::create(['tracking_number' => $tracking, 'buyer_id' => $i % 8 === 0 ? $users['customer@pharma.test']->id : $buyer->id, 'inspector_id' => $checker->id, 'created_by' => $admin->id,
                 'sender_name' => 'Distribusi Sehat Nusantara', 'sender_chat_id' => config('pharma.sender_chat_id'), 'recipient_name' => $place[0], 'recipient_phone' => '081200000000',
                 'address' => $place[2], 'origin_city' => 'Jakarta Timur', 'destination_city' => $place[1], 'item_summary' => 'Paket perlengkapan kesehatan (data contoh)', 'package_count' => 1 + ($i % 3),
                 'handling_instructions' => 'Jaga paket tetap tegak. Hindari panas langsung. Periksa segel bersama penerima sebelum serah terima.',
@@ -50,7 +51,7 @@ class DatabaseSeeder extends Seeder
             $act = function ($user, $action, $extra = []) use ($flow, &$s) {
                 $s = $flow->apply($s->id, $user, $action, ['version' => $s->version, 'reason' => 'Catatan operasional contoh.'] + $extra);
             };
-            $act($courier, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
+            $act($checker, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
             if ($i % 7 === 0) {
                 continue;
             }

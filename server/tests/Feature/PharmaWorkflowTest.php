@@ -11,7 +11,10 @@ use App\Services\MessageService;
 use App\Services\ReportService;
 use App\Services\WorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PharmaWorkflowTest extends TestCase
@@ -22,6 +25,8 @@ class PharmaWorkflowTest extends TestCase
 
     private User $courier;
 
+    private User $checker;
+
     private User $buyer;
 
     private Shipment $shipment;
@@ -30,11 +35,13 @@ class PharmaWorkflowTest extends TestCase
     {
         parent::setUp();
         Http::preventStrayRequests();
-        config(['pharma.telegram_token' => null]);
+        Storage::fake('local');
+        config(['pharma.telegram_token' => null, 'pharma.openai_api_key' => null]);
         $this->admin = User::factory()->create(['role' => 'admin']);
+        $this->checker = User::factory()->create(['role' => 'checker']);
         $this->courier = User::factory()->create(['role' => 'courier']);
         $this->buyer = User::factory()->create(['role' => 'buyer']);
-        $this->shipment = Shipment::create(['tracking_number' => 'PHA-TEST-001', 'buyer_id' => $this->buyer->id, 'inspector_id' => $this->courier->id, 'created_by' => $this->admin->id,
+        $this->shipment = Shipment::create(['tracking_number' => 'PHA-TEST-001', 'buyer_id' => $this->buyer->id, 'inspector_id' => $this->checker->id, 'created_by' => $this->admin->id,
             'sender_name' => 'Pengirim contoh', 'recipient_name' => 'Penerima contoh', 'recipient_phone' => '081200000000', 'address' => 'Alamat contoh',
             'origin_city' => 'Jakarta', 'destination_city' => 'Bekasi', 'item_summary' => 'Perlengkapan kesehatan', 'package_count' => 1,
             'handling_instructions' => 'Jaga segel tetap utuh', 'temperature_profile' => 'ambient', 'scheduled_at' => now()->addDay(), 'status' => 'inspection', 'last_location' => 'Hub Jakarta']);
@@ -44,13 +51,22 @@ class PharmaWorkflowTest extends TestCase
     private function action(User $user, string $action, array $extra = [], int $expected = 200): void
     {
         $this->shipment->refresh();
-        $this->actingAs($user)->postJson('/api/shipments/'.$this->shipment->id.'/actions/'.$action, ['version' => $this->shipment->version, 'reason' => 'Catatan pemeriksaan yang jelas.'] + $extra)->assertStatus($expected);
+        if ($action === 'inspect' && ! array_key_exists('photo_proof', $extra)) {
+            $extra['photo_proof'] = UploadedFile::fake()->image('proof.jpg');
+        }
+        $payload = ['version' => $this->shipment->version, 'reason' => 'Catatan pemeriksaan yang jelas.'] + $extra;
+        $request = $this->actingAs($user);
+        if (isset($payload['photo_proof'])) {
+            $request->post('/api/shipments/'.$this->shipment->id.'/actions/'.$action, $payload, ['Accept' => 'application/json'])->assertStatus($expected);
+        } else {
+            $request->postJson('/api/shipments/'.$this->shipment->id.'/actions/'.$action, $payload)->assertStatus($expected);
+        }
         $this->shipment->refresh();
     }
 
     private function approveAndAssign(bool $depart = true): void
     {
-        $this->action($this->courier, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
+        $this->action($this->checker, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
         $this->action($this->admin, 'approve');
         $this->action($this->admin, 'assign', ['courier_id' => $this->courier->id]);
         $this->action($this->courier, 'accept');
@@ -61,7 +77,7 @@ class PharmaWorkflowTest extends TestCase
 
     public function test_required_pharma_demo_incomplete_inspection_block_approve_seal_issue_return(): void
     {
-        $this->action($this->courier, 'inspect', ['packaging' => true, 'seal' => false, 'label' => true]);
+        $this->action($this->checker, 'inspect', ['packaging' => true, 'seal' => false, 'label' => true]);
         $this->action($this->admin, 'approve', [], 422);
         $this->action($this->admin, 'assign', ['courier_id' => $this->courier->id], 422);
         $this->assertDatabaseCount('approvals', 0);
@@ -89,6 +105,7 @@ class PharmaWorkflowTest extends TestCase
         $this->action($this->buyer, 'confirm');
         $this->action($this->buyer, 'confirm', [], 422);
         $this->assertSame('delivered', $this->shipment->status);
+        $this->assertDatabaseHas('shipment_reports', ['shipment_id' => $this->shipment->id, 'final_status' => 'COMPLETED_SAFE']);
     }
 
     public function test_buyer_isolation_and_server_roles(): void
@@ -97,7 +114,7 @@ class PharmaWorkflowTest extends TestCase
         $this->actingAs($other)->getJson('/api/shipments/'.$this->shipment->id)->assertNotFound();
         $this->actingAs($other)->getJson('/api/shipments')->assertJsonPath('total', 0);
         $this->action($this->buyer, 'approve', [], 403);
-        $this->action($this->courier, 'assign', ['courier_id' => $this->courier->id], 403);
+        $this->action($this->courier, 'assign', ['courier_id' => $this->courier->id], 404);
         $this->actingAs($this->buyer)->getJson('/api/reports')->assertForbidden();
         $this->actingAs($this->courier)->postJson('/api/shipments', [])->assertForbidden();
     }
@@ -109,7 +126,7 @@ class PharmaWorkflowTest extends TestCase
 
     public function test_stale_version_does_not_duplicate_decisions(): void
     {
-        $this->action($this->courier, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
+        $this->action($this->checker, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
         $old = $this->shipment->version;
         $this->action($this->admin, 'approve');
         $this->actingAs($this->admin)->postJson('/api/shipments/'.$this->shipment->id.'/actions/approve', ['version' => $old, 'reason' => 'Persetujuan duplikat'])->assertConflict();
@@ -143,17 +160,106 @@ class PharmaWorkflowTest extends TestCase
     public function test_temperature_outside_configured_range_keeps_dispatch_blocked(): void
     {
         $this->shipment->update(['temperature_profile' => 'controlled', 'temperature_min' => 2, 'temperature_max' => 8]);
-        $this->action($this->courier, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true], 422);
-        $this->action($this->courier, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true, 'temperature' => 15]);
+        $this->action($this->checker, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true], 422);
+        $this->action($this->checker, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true, 'temperature' => 15]);
         $this->action($this->admin, 'approve', [], 422);
-        $this->action($this->courier, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true, 'temperature' => 5]);
+        $this->action($this->checker, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true, 'temperature' => 5]);
         $this->action($this->admin, 'approve');
         $this->assertSame('approved', $this->shipment->status);
     }
 
+    public function test_assigned_courier_telemetry_is_recorded_and_temperature_excursion_is_reported(): void
+    {
+        $this->shipment->update(['temperature_profile' => 'controlled', 'temperature_min' => 2, 'temperature_max' => 8]);
+        $this->action($this->checker, 'inspect', [
+            'packaging' => true, 'seal' => true, 'label' => true, 'temperature' => 5,
+        ]);
+        $this->action($this->admin, 'approve');
+        $this->action($this->admin, 'assign', ['courier_id' => $this->courier->id]);
+        $this->action($this->courier, 'accept');
+        $this->action($this->courier, 'depart', ['location' => 'Jalan menuju Bekasi']);
+
+        $sendTelemetry = function () {
+            return $this->actingAs($this->courier)->postJson('/api/shipments/'.$this->shipment->id.'/telemetry', [
+                'latitude' => -6.2088,
+                'longitude' => 106.8456,
+                'speed_kmh' => 24.5,
+                'temperature' => 10,
+            ]);
+        };
+        $sendTelemetry()->assertCreated()->assertJsonPath('final_ai_status', 'aman');
+        $this->travel(2)->minutes();
+        $sendTelemetry()->assertCreated()->assertJsonPath('final_ai_status', 'aman');
+        $this->travel(2)->minutes();
+        $sendTelemetry()->assertCreated()->assertJsonPath('final_ai_status', 'aman');
+        $this->travel(2)->minutes();
+        config(['pharma.openai_api_key' => 'test-key', 'pharma.openai_model' => 'test-model']);
+        Http::fake([
+            'api.openai.com/v1/chat/completions' => Http::response([
+                'choices' => [['message' => ['content' => 'Suhu berada di luar batas selama lima menit.']]],
+            ]),
+        ]);
+        $response = $sendTelemetry();
+        $response->assertCreated()->assertJsonPath('final_ai_status', 'Penyimpangan');
+
+        $this->assertSame('TEMP_EXCURSION', $response->json('incident_type'));
+        $this->assertSame('openai', $response->json('anomaly_details.analysis_source'));
+        $this->assertSame('Suhu berada di luar batas selama lima menit.', $response->json('anomaly_details.summary'));
+        Http::assertSent(fn (ClientRequest $request) => $request->url() === 'https://api.openai.com/v1/chat/completions'
+            && $request->hasHeader('Authorization', 'Bearer test-key'));
+        $this->assertDatabaseCount('tracking_points', 4);
+        $this->assertDatabaseCount('ai_evaluations', 4);
+        $this->assertDatabaseHas('events', ['type' => 'ai_deviation']);
+        $this->actingAs($this->buyer)->getJson('/api/shipments/'.$this->shipment->id)
+            ->assertOk()
+            ->assertJsonMissingPath('inspector')
+            ->assertJsonMissingPath('inspector_id')
+            ->assertJsonCount(4, 'tracking_points');
+    }
+
+    public function test_missing_telemetry_is_reported_once_and_cleared_when_gps_returns(): void
+    {
+        $this->approveAndAssign();
+        $this->travel(16)->minutes();
+        $automation = app(\App\Services\TelemetryAutomationService::class);
+        $this->assertSame(1, $automation->detectTelemetryDisruptions());
+        $this->assertSame(0, $automation->detectTelemetryDisruptions());
+        $this->actingAs($this->courier)->postJson('/api/shipments/'.$this->shipment->id.'/telemetry', [
+            'latitude' => -6.2,
+            'longitude' => 106.8,
+            'speed_kmh' => 20,
+        ])->assertCreated()->assertJsonPath('final_ai_status', 'aman');
+        $this->assertDatabaseHas('ai_evaluations', ['incident_type' => 'SIGNAL_LOSS', 'condition_result' => false]);
+        $this->assertDatabaseHas('events', ['type' => 'ai_recovered']);
+    }
+
+    public function test_checker_can_inspect_but_courier_cannot_inspect_another_role_task(): void
+    {
+        $this->action($this->courier, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true], 404);
+        $this->action($this->checker, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
+        $this->assertSame('pending_approval', $this->shipment->status);
+    }
+
+    public function test_inspection_requires_photo_proof_and_customer_can_view_it(): void
+    {
+        $this->actingAs($this->checker)->postJson('/api/shipments/'.$this->shipment->id.'/actions/inspect', [
+            'version' => $this->shipment->version,
+            'reason' => 'Pemeriksaan dilakukan.',
+            'packaging' => true,
+            'seal' => true,
+            'label' => true,
+        ])->assertUnprocessable();
+
+        $this->action($this->checker, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
+        $detail = $this->actingAs($this->buyer)->getJson('/api/shipments/'.$this->shipment->id)->assertOk();
+        $photoUrl = $detail->json('inspections.0.photo_proof_url');
+        $this->assertNotEmpty($photoUrl);
+        $this->actingAs($this->buyer)->get($photoUrl)->assertOk();
+    }
+
     public function test_missing_fields_validated_instead_of_server_crash(): void
     {
-        $this->action($this->courier, 'inspect', ['packaging' => true], 422);
+        $this->action($this->checker, 'inspect', ['packaging' => true], 422);
         $this->actingAs($this->admin)->postJson('/api/shipments', [])->assertUnprocessable();
         $this->actingAs($this->admin)->getJson('/api/shipments?per_page=1000000')->assertUnprocessable();
     }
@@ -183,7 +289,7 @@ class PharmaWorkflowTest extends TestCase
 
     public function test_reminders_and_daily_reports_are_idempotent(): void
     {
-        $this->action($this->courier, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
+        $this->action($this->checker, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
         $this->action($this->admin, 'approve');
         $this->action($this->admin, 'assign', ['courier_id' => $this->courier->id]);
         Assignment::query()->update(['created_at' => now()->subMinutes(20)]);
@@ -217,7 +323,7 @@ class PharmaWorkflowTest extends TestCase
     {
         $this->action($this->admin, 'hold');
         $this->action($this->admin, 'assign', ['courier_id' => $this->courier->id], 422);
-        $this->action($this->courier, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
+        $this->action($this->checker, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
         $this->action($this->admin, 'approve');
         $this->assertSame('approved', $this->shipment->status);
     }
@@ -226,7 +332,7 @@ class PharmaWorkflowTest extends TestCase
     {
         $date = now('Asia/Jakarta')->toDateString();
         $old = app(ReportService::class)->generate($date);
-        $this->action($this->courier, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
+        $this->action($this->checker, 'inspect', ['packaging' => true, 'seal' => true, 'label' => true]);
         $new = app(ReportService::class)->generate($date);
         $this->assertSame(2, $new->revision);
         $this->assertSame('inspection', $old->fresh()->shipment_snapshot[0]['status']);

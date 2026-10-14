@@ -24,7 +24,10 @@ class ReportService
                 return $existing;
             }
             $revision = ($existing?->revision ?? 0) + 1;
-            $rows = Shipment::with(['events', 'inspections.user', 'approvals.user', 'issues.decisions.user', 'assignments.courier'])->where('created_at', '<=', $end)->get();
+            $rows = Shipment::with([
+                'events', 'inspections.user', 'approvals.user', 'issues.decisions.user',
+                'assignments.courier', 'trackingPoints', 'aiEvaluations.trackingPoint',
+            ])->where('created_at', '<=', $end)->get();
             $states = [];
             $snapshot = [];
             foreach ($rows as $s) {
@@ -36,7 +39,9 @@ class ReportService
                     'inspections' => $s->inspections->filter(fn ($r) => $r->created_at <= $end)->values()->toArray(),
                     'approvals' => $s->approvals->filter(fn ($r) => $r->created_at <= $end)->values()->toArray(),
                     'issues' => $s->issues->filter(fn ($r) => $r->created_at <= $end)->values()->toArray(),
-                    'assignments' => $s->assignments->filter(fn ($r) => $r->created_at <= $end)->values()->toArray()];
+                    'assignments' => $s->assignments->filter(fn ($r) => $r->created_at <= $end)->values()->toArray(),
+                    'tracking_points' => $s->trackingPoints->filter(fn ($r) => $r->recorded_at <= $end)->values()->toArray(),
+                    'ai_evaluations' => $s->aiEvaluations->filter(fn ($r) => $r->evaluation_time <= $end)->values()->toArray()];
             }
             $summary = ['total' => count($snapshot), 'by_status' => $states, 'events_today' => AuditEvent::whereBetween('created_at', [$start, $end])->count(),
                 'issues_today' => Issue::whereBetween('created_at', [$start, $end])->count(),
