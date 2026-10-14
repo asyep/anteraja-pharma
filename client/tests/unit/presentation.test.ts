@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { labels, tone, dateTime, nextStep } from "../../frontend/lib/presentation";
-import type { Shipment } from "../../frontend/types";
+import { labels, tone, dateTime, nextStep } from "../../src/lib/presentation";
+import type { Shipment } from "../../src/types";
 describe("UI states", () => {
   it("every workflow stage has human-readable text", () => {
     for (const status of Object.keys(labels))

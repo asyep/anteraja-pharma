@@ -8,7 +8,6 @@ backend/vendor
 backend/storage
 backend/bootstrap/cache/*.php
 node_modules
-android
 output
 test-results
 playwright-report
