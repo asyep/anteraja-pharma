@@ -10,20 +10,15 @@
     "typecheck": "node node_modules/vue-tsc/bin/vue-tsc.js --noEmit",
     "test": "node node_modules/vitest/vitest.mjs run",
     "test:e2e": "node node_modules/@playwright/test/cli.js test",
-    "lint": "node node_modules/eslint/bin/eslint.js frontend tools tests",
-    "mobile:sync": "npm run build && node node_modules/@capacitor/cli/bin/capacitor sync",
-    "mobile:android": "node node_modules/@capacitor/cli/bin/capacitor add android",
+    "lint": "node node_modules/eslint/bin/eslint.js src tools tests",
     "setup": "node tools/setup.mjs"
   },
   "dependencies": {
-    "@capacitor/core": "^7.0.0",
     "@heroicons/vue": "^2.2.0",
     "vue": "^3.5.0",
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "@capacitor/android": "^7.0.0",
-    "@capacitor/cli": "^7.0.0",
     "@eslint/js": "^9.0.0",
     "@playwright/test": "^1.56.0",
     "@vitejs/plugin-vue": "^6.0.0",
