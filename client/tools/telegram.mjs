@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
-const text = fs.readFileSync(path.join(root, "backend/.env"), "utf8");
+const envPath = path.resolve(root, "..", "server", ".env");
+const text = fs.readFileSync(envPath, "utf8");
 const env = Object.fromEntries(
   text
     .split(/\r?\n/)
@@ -14,7 +15,7 @@ const env = Object.fromEntries(
 const token = env.TELEGRAM_BOT_TOKEN;
 if (!token) {
   console.error(
-    "Isi TELEGRAM_BOT_TOKEN dalam backend/.env terlebih dahulu. Jangan kirim token ke chat.",
+    "Isi TELEGRAM_BOT_TOKEN dalam server/.env terlebih dahulu. Jangan kirim token ke chat.",
   );
   process.exit(1);
 }

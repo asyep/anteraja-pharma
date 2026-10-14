@@ -6,6 +6,7 @@ use App\Models\DailyReport;
 use App\Services\AutomationService;
 use App\Services\MessageService;
 use App\Services\ReportService;
+use App\Services\TelemetryAutomationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -23,7 +24,12 @@ class CloudSchedulerController extends Controller
                 $reportId = app(ReportService::class)->generate($today->toDateString())->id;
             }
 
-            return ['report_id' => $reportId, 'reminders' => app(AutomationService::class)->reminders(), 'messages' => app(MessageService::class)->deliver(2)];
+            return [
+                'report_id' => $reportId,
+                'reminders' => app(AutomationService::class)->reminders(),
+                'telemetry_disruptions' => app(TelemetryAutomationService::class)->detectTelemetryDisruptions(),
+                'messages' => app(MessageService::class)->deliver(2),
+            ];
         });
 
         return response()->json($result === false ? ['skipped' => 'scheduler_busy'] : $result, $result === false ? 202 : 200)->header('Cache-Control', 'no-store');
