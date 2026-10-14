@@ -7,10 +7,12 @@ use App\Models\OutboundMessage;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\ReportService;
+use App\Services\TelemetryAutomationService;
 use App\Services\WorkflowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -49,8 +51,11 @@ class PharmaController extends Controller
         if ($u->role === 'buyer') {
             $q->where('buyer_id', $u->id);
         }
+        if ($u->role === 'checker') {
+            $q->where('inspector_id', $u->id);
+        }
         if ($u->role === 'courier') {
-            $q->where(fn ($q) => $q->where('inspector_id', $u->id)->orWhereHas('assignments', fn ($a) => $a->where('courier_id', $u->id)));
+            $q->whereHas('assignments', fn ($a) => $a->where('courier_id', $u->id));
         }
 
         return $q;
@@ -68,14 +73,26 @@ class PharmaController extends Controller
             $q->where('status', $r->status);
         }
 
-        return $q->with(['buyer:id,name', 'inspector:id,name', 'assignments.courier:id,name', 'inspections' => fn ($q) => $q->orderByDesc('id')])->latest('id')->paginate((int) $r->input('per_page', 20));
+        $q->with(['buyer:id,name', 'assignments.courier:id,name', 'inspections' => fn ($q) => $q->orderByDesc('id')]);
+        if ($r->user()->role === 'admin' || $r->user()->role === 'checker') {
+            $q->with('inspector:id,name');
+        }
+        $results = $q->latest('id')->paginate((int) $r->input('per_page', 20));
+        if ($r->user()->role === 'buyer') {
+            $results->getCollection()->each(fn ($shipment) => $shipment->makeHidden(['inspector_id', 'inspector']));
+        }
+
+        return $results;
     }
 
     public function dashboard(Request $r)
     {
         $totals = $this->visible($r)->select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status');
         $stages = match ($r->user()->role) {
-            'admin' => ['held', 'pending_approval', 'inspection', 'assigned'],'courier' => ['held', 'returning', 'assigned', 'accepted', 'in_transit', 'arrived', 'inspection'],default => ['held', 'returning', 'arrived', 'in_transit', 'delivered', 'inspection', 'pending_approval', 'approved', 'assigned', 'accepted']
+            'admin' => ['held', 'pending_approval', 'inspection', 'assigned'],
+            'checker' => ['inspection'],
+            'courier' => ['held', 'returning', 'assigned', 'accepted', 'in_transit', 'arrived'],
+            default => ['held', 'returning', 'arrived', 'in_transit', 'delivered', 'inspection', 'pending_approval', 'approved', 'assigned', 'accepted']
         };
         $priority = $this->visible($r)->whereIn('status', $stages)->with(['buyer:id,name', 'inspections' => fn ($q) => $q->orderByDesc('id')])
             ->orderByRaw("CASE status WHEN 'held' THEN 0 WHEN 'returning' THEN 1 WHEN 'pending_approval' THEN 2 WHEN 'assigned' THEN 3 ELSE 4 END")
@@ -87,19 +104,63 @@ class PharmaController extends Controller
     public function detail(Request $r, int $id)
     {
         $s = $this->visible($r)->findOrFail($id);
-        $s->load(['buyer:id,name', 'inspector:id,name', 'inspections.user:id,name', 'approvals.user:id,name', 'assignments.courier:id,name', 'issues.user:id,name', 'issues.decisions.user:id,name', 'events']);
+        $s->load([
+            'buyer:id,name', 'inspector:id,name', 'inspections.user:id,name', 'approvals.user:id,name',
+            'assignments.courier:id,name', 'issues.user:id,name', 'issues.decisions.user:id,name',
+            'events', 'trackingPoints', 'aiEvaluations.trackingPoint', 'finalReport',
+        ]);
+        $s->inspections->each(fn ($inspection) => $inspection->setAttribute(
+            'photo_proof_url',
+            $inspection->photo_proof_path
+                ? "/api/shipments/{$s->id}/inspections/{$inspection->id}/photo"
+                : null,
+        ));
         if ($r->user()->role === 'buyer') {
             $s->unsetRelation('assignments');
+            $s->unsetRelation('inspector');
+            $s->makeHidden('inspector_id');
+            $s->inspections->each(function ($inspection) {
+                $inspection->unsetRelation('user');
+                $inspection->makeHidden('user_id');
+            });
+            $s->events->each(function ($event) use ($s) {
+                if ($event->user_id === $s->inspector_id || $event->type === 'inspect') {
+                    $event->actor_name = 'Checker';
+                }
+                $event->makeHidden('user_id');
+            });
+            if ($s->finalReport) {
+                $snapshot = $s->finalReport->snapshot;
+                foreach ($snapshot['events'] as &$event) {
+                    if ($event['type'] === 'inspect') {
+                        $event['actor_name'] = 'Checker';
+                    }
+                }
+                unset($event);
+                $s->finalReport->snapshot = $snapshot;
+            }
         }
 
         return $s;
+    }
+
+    public function inspectionPhoto(Request $r, int $id, int $inspection)
+    {
+        $shipment = $this->visible($r)->findOrFail($id);
+        $record = $shipment->inspections()->findOrFail($inspection);
+        abort_unless($record->photo_proof_path, 404);
+
+        return response()->file(Storage::disk('local')->path($record->photo_proof_path), [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function directory(Request $r)
     {
         abort_unless($r->user()->role === 'admin', 403);
 
-        return User::whereIn('role', ['buyer', 'courier'])->get(['id', 'name', 'role']);
+        return User::whereIn('role', ['buyer', 'checker', 'courier'])->get(['id', 'name', 'role']);
     }
 
     public function create(Request $r, WorkflowService $flow)
@@ -107,7 +168,7 @@ class PharmaController extends Controller
         abort_unless($r->user()->role === 'admin', 403);
         $d = $r->validate([
             'buyer_id' => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'buyer')],
-            'inspector_id' => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'courier')],
+            'inspector_id' => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'checker')],
             'sender_name' => 'required|string|max:150', 'sender_chat_id' => 'nullable|string|max:40|regex:/^-?[0-9]+$/',
             'recipient_name' => 'required|string|max:150', 'recipient_phone' => 'required|string|max:25',
             'address' => 'required|string|max:1000', 'origin_city' => 'required|string|max:100', 'destination_city' => 'required|string|max:100',
@@ -130,13 +191,17 @@ class PharmaController extends Controller
     public function action(Request $r, int $id, string $action, WorkflowService $flow)
     {
         $this->visible($r)->findOrFail($id);
-        $d = $r->validate([
+        $rules = [
             'version' => 'required|integer|min:1', 'reason' => 'required|string|min:3|max:2000',
             'packaging' => 'sometimes|boolean', 'seal' => 'sometimes|boolean', 'label' => 'sometimes|boolean',
             'temperature' => 'nullable|numeric|between:-50,60', 'courier_id' => 'sometimes|integer|exists:users,id',
             'location' => 'sometimes|string|max:180', 'issue_type' => 'sometimes|in:seal,packaging,temperature,label,recipient_unavailable,address,other',
             'decision' => 'sometimes|in:return,recheck,resume', 'ready' => 'sometimes|boolean', 'received_by' => 'sometimes|string|min:2|max:150',
-        ]);
+            'photo_proof' => $action === 'inspect'
+                ? 'required|image|mimes:jpg,jpeg,png,webp|max:5120'
+                : 'prohibited',
+        ];
+        $d = $r->validate($rules);
         $fields = match ($action) {
             'inspect' => ['packaging', 'seal', 'label'],'assign' => ['courier_id'],'depart','arrive','return_complete' => ['location'],'issue' => ['issue_type'],'decide' => ['decision'],'ready' => ['ready'],'deliver' => ['received_by'],default => []
         };
@@ -147,6 +212,20 @@ class PharmaController extends Controller
         }
 
         return $flow->apply($id, $r->user(), $action, $d);
+    }
+
+    public function telemetry(Request $r, int $id, TelemetryAutomationService $automation)
+    {
+        abort_unless($r->user()->role === 'courier', 403);
+        $shipment = $this->visible($r)->findOrFail($id);
+        $data = $r->validate([
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'speed_kmh' => 'nullable|numeric|between:0,300',
+            'temperature' => 'nullable|numeric|between:-50,60',
+        ]);
+
+        return $automation->record($shipment, $r->user(), $data)->load('trackingPoint');
     }
 
     public function messages(Request $r)

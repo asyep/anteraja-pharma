@@ -24,8 +24,9 @@ $_SERVER['PHP_SELF'] = '/index.php';
 unset($_SERVER['PATH_INFO']);
 
 // Composer may resolve relative PSR-4 paths against the deployment root.
-$loader = require dirname(__DIR__).'/backend/vendor/autoload.php';
-$loader->addPsr4('App\\', dirname(__DIR__).'/backend/app', true);
-$loader->addPsr4('Database\\Seeders\\', dirname(__DIR__).'/backend/database/seeders', true);
+$backend = dirname(__DIR__, 2).'/server';
+$loader = require $backend.'/vendor/autoload.php';
+$loader->addPsr4('App\\', $backend.'/app', true);
+$loader->addPsr4('Database\\Seeders\\', $backend.'/database/seeders', true);
 
-require dirname(__DIR__).'/backend/public/index.php';
+require $backend.'/public/index.php';

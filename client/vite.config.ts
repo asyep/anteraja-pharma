@@ -7,7 +7,12 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 3170,
     strictPort: true,
-    proxy: { "/api": { target: "http://127.0.0.1:8170", changeOrigin: false } },
+    proxy: {
+      "/api": {
+        target: `http://127.0.0.1:${process.env.PHARMA_API_PORT || "8170"}`,
+        changeOrigin: false,
+      },
+    },
   },
   build: { sourcemap: false },
 });

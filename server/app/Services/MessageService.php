@@ -25,7 +25,8 @@ class MessageService
             $targets[] = [null, 'sender', $s->sender_chat_id];
             $assignment = $s->assignments()->latest('id')->first();
             $courier = $assignment ? User::find($assignment->courier_id) : $s->inspector;
-            $targets[] = [$courier->id, 'courier', $courier->telegram_chat_id];
+            $audience = $assignment ? 'courier' : 'checker';
+            $targets[] = [$courier->id, $audience, $courier->telegram_chat_id];
         }
         foreach ($targets as [$user, $audience, $chat]) {
             $extra = $audience === 'courier' ? "\nInstruksi: {$s->handling_instructions}" : '';
