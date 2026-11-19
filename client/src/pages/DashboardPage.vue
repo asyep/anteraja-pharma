@@ -7,11 +7,13 @@
   import type { Shipment } from "../types";
   import StatusLabel from "../components/StatusLabel.vue";
   import ResourceState from "../components/ResourceState.vue";
+  import CustomerDashboard from "../components/CustomerDashboard.vue";
   import { dateTime, nextStep } from "../lib/presentation";
   const { data, loading, error, load } = useResource<{
     totals: Record<string, number>;
     priority: Shipment[];
   }>();
+  const isBuyer = computed(() => currentUser.value?.role === "buyer");
   const admin = computed(() => currentUser.value?.role === "admin");
   const checker = computed(() => currentUser.value?.role === "checker");
   const courier = computed(() => currentUser.value?.role === "courier");
@@ -53,7 +55,9 @@
   onMounted(() => load("dashboard"));
 </script>
 <template>
-  <section class="page-heading">
+  <CustomerDashboard v-if="isBuyer" />
+  <template v-else>
+    <section class="page-heading">
     <div>
       <p class="overline">{{ day }}</p>
       <h1>
@@ -192,5 +196,6 @@
         </li>
       </ol>
     </section>
+  </template>
   </template>
 </template>

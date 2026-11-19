@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { onMounted, ref } from "vue";
+  import { onMounted, ref, computed } from "vue";
   import { RouterLink, useRoute } from "vue-router";
   import { MagnifyingGlassIcon, PlusIcon } from "@heroicons/vue/16/solid";
   import { currentUser } from "../lib/api";
@@ -8,10 +8,12 @@
   import type { Shipment, Paginated } from "../types";
   import ShipmentTable from "../components/ShipmentTable.vue";
   import ResourceState from "../components/ResourceState.vue";
+  import CustomerShipments from "../components/CustomerShipments.vue";
   const route = useRoute(),
-    query = ref(""),
+    query = ref(typeof route.query.q === "string" ? route.query.q : ""),
     status = ref(typeof route.query.status === "string" ? route.query.status : ""),
     perPage = ref(20);
+  const isBuyer = computed(() => currentUser.value?.role === "buyer");
   const { data, loading, error, load } = useResource<Paginated<Shipment>>();
   function search(page = 1) {
     const params = new URLSearchParams({
@@ -22,10 +24,14 @@
     });
     load("shipments?" + params);
   }
-  onMounted(() => search());
+  onMounted(() => {
+    if (!isBuyer.value) search();
+  });
 </script>
 <template>
-  <section class="page-heading">
+  <CustomerShipments v-if="isBuyer" />
+  <template v-else>
+    <section class="page-heading">
     <div>
       <p class="overline">
         {{
@@ -123,4 +129,5 @@
       </button>
     </nav>
   </section>
+  </template>
 </template>
